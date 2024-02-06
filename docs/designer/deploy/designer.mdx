@@ -7,12 +7,460 @@
 
 ## 方法1: 通过示例代码启动设计器
 
-WIP
+你可以使用 Tango 代码仓库内的 `/apps/playground` 作为基础应用并改造，不过你需要移除 `.umirc.ts` 中与 `resolvePackageIndex()` 相关的配置，然后手动安装 `@music163/tango-designer`。
+
+如果上面的步骤比较繁琐，你也可以直接使用我们提供的 [示例应用](https://github.com/NetEase/tango-playground) 代码，只需克隆到本地后安装并启动即可。
 
 :::tip
-官方示例是一个包含了低代码设计器前后端低完整项目，可以直接启动。对于后端部分，作为示例而言，仅提供了最基本的逻辑，用户需要按照需求自行扩展。
+上述示例仅提供了设计器的前端基本功能，后续我们将提供一个包含了低代码设计器前后端的完整项目，可以直接启动。
 :::
 
 ## 方法2: 手工引入设计器的 npm 包
 
-WIP
+### 初始化本地项目
+
+1.  首先请确认本地已经安装了 Node.js 与 npm/yarn，且 Node.js 的版本大于 16。若本地没有安装 Node.js 或版本不满足需求，推荐使用 [nvm](https://github.com/nvm-sh/nvm) 来安装并实现多版本管理。
+
+    ```sh
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    nvm install 16
+    nvm use 16
+    ```
+
+2.  Tango 是基于 React 开发的，如果你本地没有 React 项目，可以使用 [`umi`](https://umijs.org/) 或者 [`create-react-app`](https://create-react-app.dev/) + [`craco`](https://craco.js.org/) 等脚手架创建一个新的 React 项目。下面的例子将以 umi 作为示例。
+
+    ```sh
+    mkdir a-tango-demo
+    cd a-tango-demo
+    npx create-umi@latest
+    ```
+
+3.  在本地的 hosts 文件中将沙箱的同级域名指向本地，以实现沙箱与本地通信。如果你还没有部署过沙箱，可参考 [沙箱接入](./sandbox) 文档。
+
+    ```hosts
+    # 假设沙箱已经部署在了 sandbox.example.com 下，hosts 可以将任意 example.com 的子域名指向本地
+    127.0.0.1 local.example.com
+    ```
+
+4.  与沙箱联调需要开启 HTTPS，因此你需要准备一个 HTTPS 证书并开启本地 HTTPS，你可以使用 Let's Encrypt 或者如下的指令自签证书，并配置到项目中。
+
+    ```sh
+    openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+      -subj "/CN=example.com" -addext "subjectAltName=DNS:example.com,DNS:*.example.com" \
+      -keyout example.com.key -out example.com.crt
+    ```
+
+    ```ts
+    // .umirc.ts
+    import { defineConfig } from 'umi';
+    import path from 'path';
+
+    export default defineConfig({
+      routes: [
+        { path: '/', component: 'index' },
+      ],
+      npmClient: 'npm',
+      https: {
+        key: path.resolve(__dirname, 'example.com.key'),
+        cert: path.resolve(__dirname, 'example.com.crt'),
+        http2: false,
+      },
+    });
+    ```
+
+5.  由于 Google Chrome 的安全策略，你需要让项目在本地开发时能正常返回 HTTP 响应头 `Origin-Agent-Cluster: ?0`，否则会导致 Tango 无法正常工作。
+
+    ```ts
+    // plugin.ts
+    import type { IApi } from 'umi';
+
+    export default (api: IApi) => {
+      api.addMiddlewares(() => {
+        return (req, res, next) => {
+          res.setHeader('Origin-Agent-Cluster', '?0');
+          next();
+        };
+      });
+    };
+    ```
+
+
+### 引入设计器
+
+1.  在项目中安装如下依赖：
+
+    ```sh
+    npm install @music163/tango-designer
+    # 如果本地没有 antd 等依赖的话，需要一并安装
+    npm install antd@4 @ant-design/icons
+    ```
+
+2.  初始化设计器时，你需要预先准备好符合 Tango 代码规范的项目代码，并将其组装为 `{ filename: string; code: string; }[]` 的数组，具体可参 [项目规范](#TODO) 文档。你也可以先使用如下代码用于测试：
+
+    <details>
+    <summary>点击查看代码</summary>
+
+    ```ts
+    // files.ts
+    const packageJson = `{
+      "name": "demo",
+      "private": true,
+      "dependencies": {
+        "@music163/antd": "0.1.6",
+        "@music163/tango-boot": "0.1.3",
+        "react": "17.0.2",
+        "react-dom": "17.0.2",
+        "prop-types": "15.7.2",
+        "tslib": "2.5.0"
+      }
+    }`;
+
+    const tangoConfigJson = `{
+      "packages": {
+        "react": {
+          "version": "17.0.2",
+          "library": "React",
+          "type": "dependency",
+          "resources": [
+            "https://cdn.jsdelivr.net/npm/react@{{version}}/umd/react.development.js"
+          ]
+        },
+        "react-dom": {
+          "version": "17.0.2",
+          "library": "ReactDOM",
+          "type": "dependency",
+          "resources": [
+            "https://cdn.jsdelivr.net/npm/react-dom@{{version}}/umd/react-dom.development.js"
+          ]
+        },
+        "react-is": {
+          "version": "16.13.1",
+          "library": "ReactIs",
+          "type": "dependency",
+          "resources": [
+            "https://cdn.jsdelivr.net/npm/react-is@{{version}}/umd/react-is.production.min.js"
+          ]
+        },
+        "styled-components": {
+          "version": "5.3.5",
+          "library": "styled",
+          "type": "dependency",
+          "resources": [
+            "https://cdn.jsdelivr.net/npm/styled-components@{{version}}/dist/styled-components.min.js"
+          ]
+        },
+        "moment": {
+          "version": "2.29.4",
+          "library": "moment",
+          "type": "dependency",
+          "resources": [
+            "https://cdn.jsdelivr.net/npm/moment@{{version}}/moment.js"
+          ]
+        },
+        "@music163/tango-boot": {
+          "version": "0.2.1",
+          "library": "TangoBoot",
+          "type": "baseDependency",
+          "resources": [
+            "https://cdn.jsdelivr.net/npm/@music163/tango-boot@{{version}}/dist/boot.js"
+          ],
+          "description": "云音乐低代码运行时框架"
+        },
+        "@music163/antd": {
+          "version": "0.1.7",
+          "library": "TangoAntd",
+          "type": "baseDependency",
+          "resources": [
+            "https://cdn.jsdelivr.net/npm/@music163/antd@{{version}}/dist/index.js",
+            "https://cdn.jsdelivr.net/npm/antd@4.24.13/dist/antd.css"
+          ],
+          "description": "云音乐低代码中后台应用基础物料",
+          "designerResources": [
+            "https://cdn.jsdelivr.net/npm/@music163/antd@{{version}}/dist/designer.js",
+            "https://cdn.jsdelivr.net/npm/antd@4.24.13/dist/antd.css"
+          ]
+        }
+      }
+    }`;
+
+    const routesCode = `
+    import Index from "./pages/index";
+
+    const routes = [
+      {
+        path: '/',
+        exact: true,
+        component: Index
+      },
+    ];
+
+    export default routes;
+    `;
+
+    const storeIndexCode = `
+    export { default as app } from './app';
+    `;
+
+    const entryCode = `
+    import { runApp } from '@music163/tango-boot';
+    import routes from './routes';
+    import './services';
+    import './stores';
+    import './index.less';
+
+    runApp({
+      boot: {
+        mountElement: document.querySelector('#root'),
+        qiankun: false,
+      },
+
+      router: {
+        type: 'browser',
+        config: routes,
+      },
+    });
+    `;
+
+    const viewHomeCode = `
+    import React from "react";
+    import { definePage } from "@music163/tango-boot";
+    import {
+      Page,
+      Section,
+      Button,
+    } from "@music163/antd";
+
+    class App extends React.Component {
+      render() {
+        return (
+          <Page title={tango.stores.app.title}>
+            <Section title="Section Title">
+              <Button>Hello World!</Button>
+            </Section>
+          </Page>
+        );
+      }
+    }
+
+    export default definePage(App);
+    `;
+
+
+    const storeApp = `
+    import { defineStore } from '@music163/tango-boot';
+
+    export default defineStore({
+      title: 'Page Title',
+    }, 'app');
+    `;
+
+    const serviceCode = `
+    import { defineServices } from '@music163/tango-boot';
+
+    export default defineServices({
+        test: {
+            url: "http://example.com/api/test",
+            method: "get"
+        }
+    });
+    `;
+
+    const lessCode = `
+    body {
+      font-size: 12px;
+    }
+    `;
+
+    export const sampleFiles = [
+      { filename: '/package.json', code: packageJson },
+      { filename: '/tango.config.json', code: tangoConfigJson },
+      { filename: '/src/index.js', code: entryCode },
+      { filename: '/src/pages/index.js', code: viewHomeCode },
+      { filename: '/src/routes.js', code: routesCode },
+      { filename: '/src/stores/index.js', code: storeIndexCode },
+      { filename: '/src/stores/app.js', code: storeApp },
+      { filename: '/src/services/index.js', code: serviceCode },
+      { filename: '/src/index.less', code: lessCode },
+    ];
+    ```
+
+    </details>
+
+
+3.  在项目的代码中引入设计器，并传入业务项目的代码至 workspace，具体可参考如下代码：
+
+    <details>
+    <summary>点击查看代码</summary>
+
+    ```ts
+    import React, { useState, useMemo } from 'react';
+    import { Box } from 'coral-system';
+    import { Button, Space } from 'antd';
+    import {
+      Designer,
+      DesignerPanel,
+      SettingPanel,
+      Sidebar,
+      Toolbar,
+      WorkspacePanel,
+      WorkspaceView,
+      CodeEditor,
+      Sandbox,
+      DndQuery,
+      themeLight,
+    } from '@music163/tango-designer';
+    import { createEngine, Workspace } from '@music163/tango-core';
+    import {
+      ApiOutlined,
+      AppstoreAddOutlined,
+      BuildOutlined,
+      ClusterOutlined,
+      FunctionOutlined,
+      createFromIconfontCN,
+    } from '@ant-design/icons';
+    import { sampleFiles } from './files';
+
+    // 沙箱初始化
+    const sandboxQuery = new DndQuery({
+      context: 'iframe',
+    });
+
+    // 图标库初始化（物料面板和组件树使用了 iconfont 里的图标）
+    createFromIconfontCN({
+      scriptUrl: '//at.alicdn.com/t/c/font_2891794_lzc7rtwuzf.js',
+    });
+
+    /**
+     * 平台初始化
+    */
+    export default function App() {
+      const [menuLoading, setMenuLoading] = useState(true);
+      const [menuData, setMenuData] = useState(false);
+      
+      const { workspace, engine } = useMemo(() => {
+        // 实例化工作区
+        const workspace = new Workspace({
+          entry: '/src/index.js',
+          files: sampleFiles,
+        });
+
+        // 引擎初始化
+        const engine = createEngine({
+          workspace,
+        });
+
+        return { workspace, engine };
+      }, [sampleFiles]);
+
+      return (
+        <Designer
+          theme={themeLight}
+          engine={engine}
+          sandboxQuery={sandboxQuery}
+        >
+          <DesignerPanel
+            logo={(
+              <Box px="l">
+                Logo
+              </Box>
+            )}
+            description="Description"
+            actions={
+              <Box px="l">
+                <Toolbar>
+                  <Toolbar.Item key="routeSwitch" placement="left" />
+                  <Toolbar.Item key="history" placement="left" />
+                  <Toolbar.Item key="preview" placement="left" />
+                  <Toolbar.Item key="modeSwitch" placement="right" />
+                  <Toolbar.Item key="togglePanel" placement="right" />
+                  <Toolbar.Separator />
+                  <Toolbar.Item placement="right">
+                    <Space>
+                      <Button type="primary">发布</Button>
+                    </Space>
+                  </Toolbar.Item>
+                </Toolbar>
+              </Box>
+            }
+          >
+            <Sidebar>
+              <Sidebar.Item
+                key="components"
+                label="组件"
+                icon={<AppstoreAddOutlined />}
+                widgetProps={{
+                  menuData: menuData as any,
+                  loading: menuLoading,
+                }}
+              />
+              <Sidebar.Item key="outline" label="结构" icon={<BuildOutlined />} />
+              <Sidebar.Item
+                key="variables"
+                label="变量"
+                icon={<FunctionOutlined />}
+                isFloat
+                width={800}
+              />
+              <Sidebar.Item key="dataSource" label="接口" icon={<ApiOutlined />} isFloat width={800} />
+              <Sidebar.Item
+                key="dependency"
+                label="依赖"
+                icon={<ClusterOutlined />}
+                isFloat
+                width={800}
+              />
+            </Sidebar>
+            <WorkspacePanel>
+              <WorkspaceView mode="design">
+                <Sandbox
+                  // 将 bundlerURL 替换为已部署的沙箱的地址
+                  bundlerURL="https://sandbox.example.com"
+                  // 从沙箱的全局变量中获取挂载的 UMD 组件库的 menuData 与 prototypes 信息
+                  // 如果上述信息可以通过其他方式获取到，你也可以直接调用相关方法注册
+                  onMessage={(e) => {
+                    if (e.type === 'done') {
+                      const sandboxWindow: any = sandboxQuery.window;
+                      if (sandboxWindow.TangoAntd) {
+                        if (sandboxWindow.TangoAntd.menuData) {
+                          setMenuData(sandboxWindow.TangoAntd.menuData);
+                        }
+                        if (sandboxWindow.TangoAntd.prototypes) {
+                          workspace.setComponentPrototypes(sandboxWindow.TangoAntd.prototypes);
+                        }
+                      }
+                      if (sandboxWindow.localTangoComponentPrototypes) {
+                        workspace.setComponentPrototypes(sandboxWindow.localTangoComponentPrototypes);
+                      }
+                      setMenuLoading(false);
+                    }
+                  }}
+                />
+              </WorkspaceView>
+              <WorkspaceView mode="code">
+                <CodeEditor />
+              </WorkspaceView>
+            </WorkspacePanel>
+            <SettingPanel />
+          </DesignerPanel>
+        </Designer>
+      );
+    }
+    ```
+
+    </details>
+
+4.  编写完成后，使用脚手架的指令启动项目开始开发，启动后需要通过之前 hosts 配置的域名打开本地项目，并信任自签发的证书。
+
+    ```sh
+    # 在传入 HOST 与 PORT 环境变量启动后，可通过 https://local.example.com:8001 访问项目
+    PORT=8001 HOST=local.example.com npm start
+    ```
+
+5.  如果一切正常，现在你应该可以正常看到设计器的效果了。
+
+    ![](https://p6.music.126.net/obj/wo3DlcOGw6DClTvDisK1/33392683897/c72b/f6f2/2944/a481233c752a9e74213fa15aa516b6f0.png)
+
+
+## 配置低代码设计器
+
+请参考 [设计器自定义](../customize/panels) 部分。

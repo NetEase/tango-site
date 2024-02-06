@@ -14,6 +14,141 @@ Tango 沙箱由三个部分构成，包括低代码沙箱前端组件、在线�
 
 WIP
 
+
 ## 沙箱的后端服务接入
 
 WIP
+
+
+## 在线打包器
+
+Tango 预置的沙箱方案是基于 [CodeSandbox](https://github.com/codesandbox/codesandbox-client) 实现的，并在之上做了适配 Tango 的修改，你可以在 [这里](https://github.com/NetEase/codesandbox-client) 查看我们修改后的实现。由于沙箱的能力并不属于 Tango 的核心部分，因此你需要单独部署 CodeSandbox 的沙箱服务。
+
+
+### 准备沙箱产物
+
+#### 使用预构建的资源
+
+我们的代码仓库配置了 GitHub Actions，它会在代码变更时自动构建沙箱，然后将最终的产物上传至 GitHub Releases。
+
+你可以直接在 [这里](https://github.com/NetEase/codesandbox-client/releases) 下载最新版本的产物，下载后将其解压至 `./www` 目录下即可。
+
+#### 手动构建
+
+如你需要对沙箱做一些修改，你可以通过 clone 代码仓库到本地，然后执行指令构建产物。
+
+1.  首先请确认本地已经安装了 Node.js 与 npm/yarn，且 Node.js 的版本大于 16。若本地没有安装 Node.js 或版本不满足需求，推荐使用 [nvm](https://github.com/nvm-sh/nvm) 来安装并实现多版本管理。目前 workflow 里配置的 Node.js 版本为 16。
+
+    ```sh
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    nvm install 16
+    nvm use 16
+    ```
+
+2.  克隆代码仓库到本地：
+
+    ```sh
+    git clone https://github.com/NetEase/codesandbox-client.git
+    ```
+
+3.  安装依赖：
+
+    ```sh
+    cd codesandbox-client
+    yarn
+    ```
+
+4.  构建产物：
+
+    ```sh
+    yarn build:deps
+    yarn build:sandpack
+    ```
+
+5. 构建完成后，你可以在 `./www` 下找到最终构建的产物。
+
+
+### 部署沙箱
+
+:::tip  
+CodeSandbox 的沙箱服务需要确保部署环境支持 HTTPS 访问。你需要一个可自主控制的域名，并为其获取有效的 SSL 证书。你可以使用 Let's Encrypt 或 ZeroSSL 等方法获取证书，或者使用主机服务提供商提供的 HTTPS 方案。
+
+对于本地开发等无法准备有效 SSL 证书的情况，你可以将域名在 hosts 文件里指向 `127.0.0.1`，然后使用 Caddy 提供的自签发证书功能（该配置已预置在仓库的 `Caddyfile` 中），或者使用下面的命令手动生成证书并添加信任，然后将其写入配置文件：
+
+```sh
+# 为 example.com 及其子域名生成一个有效期 10 年的自签发证书
+openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+  -subj "/CN=example.com" -addext "subjectAltName=DNS:example.com,DNS:*.example.com" \
+  -keyout example.com.key -out example.com.crt
+```
+
+:::
+
+#### 使用 Caddy 部署
+
+我们在项目内部提供了一个 Caddy 配置文件，你可以在这个配置文件中调整参数，然后使用 Caddy 启动服务器。
+
+1.  从 [Caddy 的下载页面](https://caddyserver.com/download) 下载可执行文件，或参考 [Caddy 的文档](https://caddyserver.com/docs/install) 了解其他安装方式。
+
+2.  确保构建产物位于 `./www` 目录下，且当前目录下存在 `Caddyfile` 文件。如果你是直接从 Releases 页面下载的沙箱产物，可以从 [这里](https://github.com/NetEase/codesandbox-client/raw/master/Caddyfile) 下载最新的 `Caddyfile` 文件。
+
+3.  将沙箱运行的域名的 DNS 记录解析到你的服务器的 IP 地址；如果你是在本地开发，你可以在 hosts 文件里将测试的域名指向 `127.0.0.1`。
+
+4.  如果你需要使用 Caddy 的自动 HTTPS 功能（包括本地开发），请将 `Caddyfile` 里的 `:8080` 替换为你自己的域名，Caddy 会为该域名自动签发 SSL 证书；如果你在服务上游有其他代理服务器负责处理 HTTPS，则可以不做修改，但请确认上游服务器代理的端口与 `Caddyfile` 里的端口保持一致。
+
+5.  在 4 开启了 HTTPS 功能的基础上，如果你需要 Caddy [自动签发合法的 HTTPS 证书](https://caddyserver.com/docs/automatic-https) （而不是本地开发用的自签证书），请将 `Caddyfile` 里的 `local_certs` 一行删除；如果需要手动指定证书，请参考 [Caddy 文档](https://caddyserver.com/docs/caddyfile/options#tls-options)。
+
+6.  Caddy 的配置文件里默认监听的 HTTP 端口是 `8080` 端口，HTTPS 则是 `8443` 端口，如果需要修改为默认的 `80` 与 `443` 端口，请修改 `Caddyfile` 里的 `http_port` 与 `https_port`
+
+7.  如果一切准备就绪，你可以使用下面的指令启动 Caddy：
+
+    ```sh
+    caddy run
+    ```
+
+8.  部署完成后，在浏览器上访问你配置的域名端口，例如若你在 4 里将域名改为 `local.example.com`，则访问 `https://local.example.com:8443` 即可。若浏览器的标题栏显示为 _Sandbox - CodeSandbox_ 则表示部署成功。
+
+#### 使用 Docker 部署
+
+我们在项目内部提供了一个 `Dockerfile`，它会自动从源码构建产物，并自动使用 Caddy 的 Docker 镜像部署。你可以在部署前按照上面的步骤按需修改 `Caddyfile` 文件，然后使用下面的指令构建镜像并启动容器：
+
+```sh
+docker build -t tango-codesandbox .
+docker run -p 8443:8443 tango-codesandbox
+```
+
+#### 使用 nginx 部署
+
+如果你更熟悉 nginx，可以参考 [这里](https://github.com/NetEase/tango/issues/84#issuecomment-1878229696) 的配置修改，然后将 SSL 证书更新至配置中，或是通过 Certbot 或 acme.sh 等工具签发证书并自动修改 nginx 配置。
+
+
+### 常见问题
+
+- **沙箱部署后显示白屏，并在控制台提示 `Error: Can't detect sandbox ID from the current URL`**  
+
+    这是正常情况，沙箱需要引擎传入代码后才能正常执行，只需确认浏览器的标题栏显示为 _Sandbox - CodeSandbox_ 即可。
+
+- **沙箱部署必须要启用 HTTPS 吗？**  
+
+    是的，因为 CodeSandbox 会注册 Service Worker 来处理请求缓存。此外由于 Chrome 的 [安全策略](https://developer.chrome.com/blog/document-domain-setter-deprecation) 限制，若需要与不同域名的 iframe 通过修改 `document.domain` 通信，必须在 top 与 iframe 的 HTTP 响应头中添加 `Origin-Agent-Cluster: ?0` 响应头，而且该响应头仅在 HTTPS 下生效。
+
+- **本地开发没有合法的 HTTPS 证书该怎么办？**
+
+    你可以在操作系统的 hosts 文件里将任意域名指向 `127.0.0.1`，并为该域名签发自签证书。Caddy 会在配置文件中指定了访问域名的情况下自动签发证书，并自动将 CA 证书加入当前设备的可信根证书，因此你不需要再做其他操作。不过如果你使用了其他的部署方案，或者有自己的理由自行签发证书，可以使用下面的指令创建证书：
+
+    ```sh
+    # 为 example.com 及其子域名生成一个有效期 10 年的自签发证书
+    openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+      -subj "/CN=example.com" -addext "subjectAltName=DNS:example.com,DNS:*.example.com" \
+      -keyout example.com.key -out example.com.crt
+    ```
+
+- **我无法在 Tango 设计器里选中或拖拽沙箱里的组件**  
+
+    这是因为 Tango 设计器的沙箱是通过 iframe 嵌入的，而 iframe 的安全策略是不允许跨域访问的，所以 Tango 与沙箱会通过修改 `document.domain` 为同级域名的方式来实现跨域访问。
+
+    首先请确认 Tango 的设计器与沙箱所属的域名都是同级域名的子域名。例如你可以将设计器部署在 `tango.example.com` 下，然后将沙箱部署在 `sandbox.example.com` 下，由于他们都是 `example.com` 的子域名，所以两者可以通过修改 `document.domain` 实现跨域访问。
+    
+    如果他们已经位于同级域名下，请确认 Tango 设计器与沙箱 iframe 的页面请求的 HTTP 响应头中均包含 `Origin-Agent-Cluster: ?0`，只有当服务器返回该响应头时，Chrome 才能正常修改 `document.domain`。
+
+    如果上述步骤均已确认无误，这可能是浏览器的缓存问题，可尝试重启浏览器后重新访问。
