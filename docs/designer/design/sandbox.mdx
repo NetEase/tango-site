@@ -1,5 +1,326 @@
 # 沙箱实现
 
-:::tip
-正在编写中，敬请期待。
+沙箱是低代码项目的运行时环境，负责在浏览器中将低代码项目的代码渲染成最终页面，并与引擎交互，实现页面的搭建与配置。Tango 的沙箱方案是基于源码实现的，而源码的写法多种多样，此外还需要考虑三方依赖的加载运行，因此 Tango 的沙箱需要实现一套完整的代码运行时，甚至需要对 Node API 进行一定的兼容。
+
+Tango 目前采用的沙箱方案是基于 [CodeSandbox](https://github.com/codesandbox/codesandbox-client) 中的 [Sandpack](https://sandpack.codesandbox.io/) 实现的。相比传统的 JS Loader 实现的沙箱方案，它提供了更完整的运行时环境，通过 browserfs 等模拟兼容本地环境，再借助 Babel 将 ESM 转译为 CommonJS，可以支持三方依赖在浏览器上运行。此外，Sandpack 提供了一个独立的 iframe 运行代码，可以实现代码的运行时环境隔离，避免污染全局变量。
+
+:::tip  
+本文主要引用了 [CodeSandbox 如何工作? 上篇](https://bobi.ink/2019/06/20/codesandbox/) 的部分内容，并在此基础上进行了修改。如果你对 CodeSandbox 底层的更多细节感兴趣，可以参考这篇文章。  
 :::
+
+## CodeSandbox 的基本结构
+
+CodeSandbox 是一个在线运行 JavaScript 代码的平台，它通过兼容 Node.js 与 CommonJS 层，借助 Service Worker 等能力在浏览器上实时转译与运行代码。你可以把它的转译能力想象成一个在浏览器上运行的 webpack，不过因为 webpack 实在是太庞大了，因此 CodeSandbox 的作者重新设计了一套运行时转译方案。
+
+这套方案和 webpack 类似，比如它的转译逻辑就和 webpack 的 loader 比较接近。不过由于 CodeSandbox 能自己处理依赖关系与转译，因此它省略掉了 webpack 上的大量功能，主要聚焦于代码的转译上。而且由于 CodeSandbox 能自己处理转译逻辑，因此在初始化依赖时能忽略掉绝大多数的 `devDependencies`，从而大幅减少项目的初始化时间与转译时间。
+
+CodeSandbox 可以简化为三个部分：
+
+![](https://p6.music.126.net/obj/wo3DlcOGw6DClTvDisK1/32415470217/2602/5062/2c49/51e98eb9ca8752f33fa919b57ec1b443.png)
+
+- Editor：编辑器，供用户修改源码后同步到沙箱（Tango 没有使用，我们只使用了沙箱 Sandpack 的能力）
+- Sandbox：代码运行器，是一个独立的 iframe，负责转译和运行
+- Packager：包管理器，类似 yarn 和 npm，负责拉取和缓存 npm 依赖
+
+它的工作流程可以简述如下：
+
+- 代码准备：平台引用 Sandpack 组件，通过 `postMessage` 将 Editor 里的代码传递给沙箱
+- 依赖初始化：沙箱处理传入的文件，根据 `package.json` 的 `dependencies` 调用 Packager 打包服务获取依赖
+- 转译代码：解析代码的依赖关系，将依赖的代码通过对应的 Transpiler 转译
+- 执行代码：在沙箱中初始化 html 等，然后从代码的入口文件开始执行转译后的代码
+- 上述执行周期内和执行完成后，沙箱会抛出事件让平台感知
+
+## 依赖的初始化
+
+如前所述，由于 CodeSandbox 自行实现了核心的转译逻辑，因此在初始化依赖时可以相对轻量一些，只需获取 `dependencies` 里的依赖，而忽略掉 `devDependencies` 以及 `@types` 开头的依赖。那么 CodeSandbox 是如何获取依赖的呢？CodeSandbox 实现了两套方案，一套是默认的远程在线打包方案，另一套是从 unpkg/jsdelivr 等静态资源获取依赖的兜底方案。
+
+这里我们先来谈谈兜底的实时获取静态资源的方案，它主要分为如下几个步骤：
+
+- 代码传入后，通过 `package.json` 获取解析项目的入口文件与 `dependencies`
+- 从 unpkg 或 jsdelivr 上拉取 `/package.json` 获取该依赖的入口文件与子依赖
+- 从 unpkg 或 jsdelivr 上拉取 meta 信息接口，获取依赖下的文件列表
+- 从入口文件开始，解析代码里的 `require` 语句，逐一递归获取其他需要的所有文件，再根据上述信息生成依赖信息
+
+可见上述的流程在浏览器前端操作的话，会有很多并发请求，时间大部分也浪费在了网络请求上。那么如何优化呢？其实 CodeSandbox 早就想到了。CodeSandbox 最早实现的方案就是在线打包完整依赖，它通过一个 Serverless 服务在线拉取依赖，然后走类似上面的流程一次性返回所有需要的文件：
+
+上述流程在浏览器前端操作时，会有很多并发请求，时间大部分也浪费在了网络请求上。其实 CodeSandbox 早就想到了，它设计了一个 Serverless 服务 [dependency-packager](https://github.com/codesandbox/dependency-packager) 用于在线拉取依赖，然后一次性返回所有需要的文件。这样当 CodeSandbox 需要依赖时，会调用在线的打包服务从缓存中拿到依赖，减少前端的网络请求阻塞。
+
+
+![](https://p6.music.126.net/obj/wo3DlcOGw6DClTvDisK1/32415494900/3782/a70a/53da/168222fa3699d6348390191df315448d.png)
+
+dependency-packager 的整体流程大致如下：
+
+- packager 接收到 API 请求，解析 API 地址，取出包名与版本号
+- 清理临时文件，然后调用 `yarn add` 安装依赖到临时目录下
+- 获取所有依赖的 `package.json` 文件，并解析与确定入口文件的路径
+- 遍历依赖目录，拿到该依赖下需要通过 `require` 引入的所有文件
+- 将上述文件需要引入的文件路径记录下来
+- 根据上述所有信息生成包与包之间的依赖信息：
+  - peerDependencies：该包在 `package.json` 里定义的 `peerDependencies`
+  - dependencyDependencies：该包的关联信息，包括父依赖、子依赖（根据引入的文件路径遍历生成）、依赖的版本与最终安装的版本（根据父子依赖的 `package.json` 生成）
+  - dependencyAliases：可选，包别名，例如 `react` 作为 `preact-compat` 的别名
+- 将上述所有数据组装为 Manifest，通过接口返回，同时缓存数据到 S3
+- 清理临时文件
+
+这样，当 CodeSandbox 需要依赖时，会调用在线的打包服务获取依赖需要的所有文件，减少前端的网络请求阻塞。当然这个方法也并不是一直有效的，例如如果一个依赖比较新而从未缓存过，packager 安装依赖过慢导致无法马上返回结果，或者是服务暂时无法访问，或是在转译的过程中引入了被 packager 忽略的文件，此时会使用之前提到的调用 unpkg 或者 jsdelivr 的兜底方案。
+
+## 转译与构建
+
+之前我们提到，CodeSandbox 的转译整体逻辑和 webpack 类似，但因为 webpack 过于繁重，所以 CodeSandbox 的作者没有直接使用 webpack 的能力，而是重新实现了一套转译方案，可以将其理解为精简版的 webpack。当 CodeSandbox 开始转译时，会调用 `compile()` 方法开始转译，整个转译流程有如下几个核心对象，它们的关系如下图：
+
+![](https://p6.music.126.net/obj/wo3DlcOGw6DClTvDisK1/32415506466/67b2/543b/58af/b72c71a8567136c011d9df9fb6f0237f.png)
+
+- Manager：这是沙箱转译流程里的核心对象，负责管理配置信息（Preset）、项目依赖（Manifest）、以及维护项目所有模块（TranspilerModule）
+- Manifest：上文的 Packager 最终生成的所有依赖的信息
+- TranspiledModule：代码转译后的模块本身，当代码传入时会实例化为该对象。它维护着转译的结果、代码执行的结果、依赖的模块信息，负责驱动具体模块的转译（调用 Transpiler）和执行
+- Preset：项目构建模板，例如 `vue-cli`、`create-react-app`，配置了项目文件的转译规则，就像 webpack 的 `webpack.config.js` 文件
+- Transpiler：等价于 Webpack 的 loader，负责对指定类型的文件进行转译，例如 Babel、TypeScript、Sass、Less 等等
+- WorkerTranspiler：这是继承自 Transpiler 的一个类，它能调度一个 Worker 池来执行转译任务，从而提高复杂逻辑（如 Babel）转译的性能
+
+整个沙箱生命周期的转译流程大致如下：
+
+![](https://p6.music.126.net/obj/wo3DlcOGw6DClTvDisK1/32415507979/8d51/d501/db1b/e7a200c08211145836d3dd75a319314e.png)
+
+沙箱在接收到代码后会调用 `compile()` 方法，该方法会根据传入的 `template` 对应到具体的 Preset，然后实例化控制整个生命周期的 Manager 实例并处理依赖。当依赖全部 resolved 后，传入的文件将会被实例化为 TranspiledModule，构成模块的依赖树。接下来，Manager 会逐一转译依赖到的模块，转译完成后再从入口的文件开始执行转译后的代码。
+
+### Preset
+
+Preset 是项目构建模板，不同的模板定义了不同的转译规则，例如精简后的 `create-react-app` 的 preset 有如下定义：
+
+```js
+const preset = new Preset(
+  'create-react-app', ['js', /* ... */], aliases, {
+    hasDotEnv: true,
+    processDependencies: async originalDeps => ({
+      '@babel/core': '^7.3.3',
+      '@babel/runtime': '^7.3.4',
+      ...originalDeps, 
+    }),
+    setup: async manager => {
+      if (initialized) { return; }
+      preset.resetTranspilers();
+      preset.registerTranspiler(
+        module => (
+          /\.(m|c)?(t|j)sx?$/.test(module.path) &&
+          !module.path.endsWith('.d.ts')
+        ),
+        [
+          {
+            transpiler: babelTranspiler,
+            options: { /* ... */ },
+          }
+        ]
+      );
+      preset.registerTranspiler(
+        module => /\.css$/.test(module.path),
+        [
+          { transpiler: postcssTranspiler },
+          {
+            transpiler: stylesTranspiler,
+            options: { hmrEnabled: isRefresh },
+          },
+        ]
+      );
+      // Try to preload jsx-runtime
+      manager
+        .resolveTranspiledModuleAsync('react/jsx-runtime')
+        .then(x => { x.transpile(manager); });
+    },
+    preEvaluate: async manager => {
+      if (manager.isFirstLoad && manager.reactDevTools) {
+        await initializeReactDevToolsLatest();
+      }
+    },
+  },
+);
+```
+
+可以看到该 Preset 主要做了如下几个事情：
+
+- 在 `processDependencies` 里可以对代码传入的依赖信息做修改，例如这里就补充了 Babel 的依赖，可以保证一些必须的依赖即便不在 `dependencies` 里也会被引入
+- 在 `setup` 里注册了 Transpiler，例如对 .mjs、.cjs、.js、.jsx、.ts、.tsx 等文件注册了 BabelTranspiler 转译为 CommonJS 模块，对 .sass、.less 等文件注册了对应的 Transpiler 并通过 postcss 处理等
+- 在 `preEvaluate` 里可以在执行前做一些其他操作，例如这里加载了 React DevTools 方便调试
+
+### Transpiler
+
+Transpiler 负责对特定文件进行转译，它就像是 webpack 里的 loader。它的定义非常简单：
+
+```ts
+export abstract class Transpiler {
+  cacheable: boolean;
+  name: string;
+  HMREnabled: boolean;
+
+  constructor(name: string) {
+    this.cacheable = true;
+    this.name = name;
+    this.HMREnabled = true;
+  }
+
+  initialize() {}
+  dispose() {}
+  cleanModule(loaderContext: LoaderContext) {}
+
+  abstract doTranspilation(
+    code: string,
+    loaderContext: LoaderContext
+  ): Promise<TranspilerResult> | TranspilerResult;
+
+  /* eslint-enable */
+  transpile(
+    code: string,
+    loaderContext: LoaderContext
+  ): Promise<TranspilerResult> | TranspilerResult {
+    return this.doTranspilation(code, loaderContext);
+  }
+
+  getTranspilerContext(
+    manager: Manager
+  ): Promise<object> {
+    return Promise.resolve({
+      name: this.name,
+      HMREnabled: this.HMREnabled,
+      cacheable: this.cacheable,
+    });
+  }
+}
+```
+
+除了初始化的逻辑外，Transpiler 的核心就是 `doTranspilation` 方法，它负责对代码进行转译，并返回转译后的结果。它接收两个参数，一个是当前文件的源代码，另一个是当前的上下文，例如当前的文件路径、转译器的配置参数、获取与注册依赖等。
+
+例如下面是 `JSONTranspiler` 的实现，它负责将 JSON 文件转译为标准的 js export：
+
+```ts
+import { Transpiler } from 'sandpack-core';
+
+class JSONTranspiler extends Transpiler {
+  doTranspilation(code: string) {
+    const result = `
+      module.exports = JSON.parse(${JSON.stringify(code || '')})
+    `;
+
+    return Promise.resolve({
+      transpiledCode: result,
+    });
+  }
+}
+
+const transpiler = new JSONTranspiler('json-loader');
+
+export { JSONTranspiler };
+
+export default transpiler;
+```
+
+或是 `ReactSVGTranspiler` 的实现，它负责将 svg 文件转译为 React 组件：
+
+```ts
+import { LoaderContext, Transpiler } from 'sandpack-core';
+
+class ReactSVGTranspiler extends Transpiler {
+  constructor() {
+    super('react-svg-loader');
+  }
+
+  async doTranspilation(code: string, loaderContext: LoaderContext) {
+    const transpiledCode =
+      `import link from ${JSON.stringify(
+        `!base64-loader!${loaderContext.path}`
+      )};` +
+      `export default link;` +
+      `export const Url = link;` +
+      `export { default as ReactComponent } from ${JSON.stringify(
+        `!babel-loader!svgr-loader!${loaderContext.path}`
+      )};`;
+
+    return {
+      transpiledCode,
+    };
+  }
+}
+
+const transpiler = new ReactSVGTranspiler();
+
+export { ReactSVGTranspiler };
+
+export default transpiler;
+```
+
+当需要转译时，Manager 会调用 TranspiledModule 的 `transpile()` 方法。TranspiledModule 此时会生成 loaderContext 并根据定义的 Preset 获取需要调用的 Transpiler，然后逐一遍历 Transpiler 并执行 `transpile()` 方法，经过 `doTranspilation()` 的转译处理后，得到最终转译后的代码。转译完成后，TranspiledModule 会处理当前文件的依赖关系，然后再调用子依赖的 TranspiledModule 的 `transpile()` 方法逐一转译。
+
+### WorkerTranspiler
+
+上面只是一些简单的转译的逻辑，但是对于复杂的转译过程，如果还使用上面的同步方法转译，势必会带来性能问题。所以对于复杂的转译逻辑，可以通过实现 WorkerTranspiler 来提升转译效率。WorkerTranspiler 的定义如下图所示：
+
+![](https://p6.music.126.net/obj/wo3DlcOGw6DClTvDisK1/32415516796/83d6/f28b/c834/41aba525878ae905fa69d0a5199f587e.png)
+
+WorkerTranspiler 继承自 Transpiler，同时内部还引入了一个 WorkerManager 来负责 worker 的调度。当 Transpiler 实例化 WorkerManager 时，会指定并行的 worker 数量，同时注册一些与 loaderContext 相关的方法，方便在 worker 内也能调用到相关的方法。WorkerManager 内部维护了一个 worker 队列与执行队列，当 WorkerTranspiler 传入转译任务时，WorkerManager 会将其加入执行队列 `pendingCalls` 中。在转译的生命周期开始与结束时调用 `executeRemainingTasks()` 方法将队列的方法分配至空闲的 worker 中执行，然后异步返回执行的结果，实现多线程转译。
+
+一个典型的例子就是 BabelTranspiler，它的转译流程大致如下：
+
+![](https://p6.music.126.net/obj/wo3DlcOGw6DClTvDisK1/32415524386/a471/8686/a88b/cf6f3aafacfc24479059cbd8db7802f7.png)
+
+## 代码执行
+
+经过上面的转译流程后，现在项目所需的代码已经准备好了，接下来就是如何执行了。沙箱的代码执行的实现如下：
+
+```ts
+const g = typeof window === 'undefined' ? self : window;
+export default function (
+  code: string,
+  require: Function,
+  module: { exports: any },
+  env: Object = {},
+  globals: Object = {},
+  { asUMD = false }: { asUMD?: boolean } = {}
+) {
+  const { exports } = module;
+  const global = g;
+  const process = buildProcess(env);
+  g.global = global;
+  const allGlobals: { [key: string]: any } = {
+    require,
+    module,
+    exports,
+    process,
+    global,
+    ...globals,
+  };
+
+  if (asUMD) {
+    delete allGlobals.module;
+    delete allGlobals.exports;
+    delete allGlobals.global;
+  }
+  /* ... */
+  const allGlobalKeys = Object.keys(allGlobals);
+  const globalsCode = allGlobalKeys.length
+    ? allGlobalKeys.join(', ') : '';
+  const globalsValues = allGlobalKeys.map(k => allGlobals[k]);
+  try {
+    const newCode =
+      `(function $csb$eval(` + globalsCode + `){` + code + `\n})`;
+    // @ts-ignore
+    (0, eval)(newCode).apply(allGlobals.global, globalsValues);
+
+    return module.exports;
+  } catch (e: any) {
+    /* ... */
+  }
+}
+```
+
+- 获取传入的 `index.html` 文件，解析并通过设置 `document.body.innerHTML` 来设置 html 里 body 部分的内容
+- 注入 html 里定义的外部 css 与 js 资源
+- 模拟 CommonJS 所需的环境，如 `require`、`module`、`exports`、`global` 等方法与变量
+- 从入口模块开始执行，执行时会将代码封装为立即执行函数的形式，然后调用 `eval()` 执行并传入上述变量
+- 当模块调用了 `require()` 方法时，会按照上述流程递归执行响应的文件
+- 执行完毕后返回 `module.exports`，执行完成
+
+经过上述流程后，项目中的代码就会被转译并执行，最终渲染在沙箱里，你就能看到代码的实际效果了。后续传入沙箱的代码更新，会通过和已有的代码对比，将变更的部分重新转译为 TranspiledModule，再经过上述的转译与执行流程，来实现视图的更新。
+
+## 扩展阅读
+
+- [CodeSandbox 如何工作? 上篇](https://bobi.ink/2019/06/20/codesandbox/)
+- [搭建一个属于自己的在线 IDE](https://juejin.cn/post/6882541950205952013)
+- [云音乐低代码：基于 CodeSandbox 的沙箱性能优化](https://juejin.cn/post/7102243774985666596)
