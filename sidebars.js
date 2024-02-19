@@ -23,7 +23,11 @@ const sidebars = {
     {
       type: 'category',
       label: '接入指南',
-      items: ['designer/deploy/designer', 'designer/deploy/sandbox', 'designer/deploy/server'],
+      items: [
+        'designer/deploy/designer',
+        'designer/deploy/sandbox',
+        'designer/deploy/server',
+      ],
       collapsed: false,
     },
     {
@@ -42,24 +46,32 @@ const sidebars = {
     {
       type: 'category',
       label: '设计原理',
-      items: ['designer/design/overview', 'designer/design/filesystem', 'designer/design/sandbox'],
+      items: [
+        'designer/design/overview',
+        'designer/design/filesystem',
+        'designer/design/sandbox',
+      ],
       collapsed: false,
     },
-  ],
-
-  boot: [
-    'boot/intro',
-    'boot/app-spec',
-    'boot/tango-config',
-    'boot/app',
-    'boot/service',
-    'boot/store',
-    'boot/page',
-    'boot/global',
-    // 'boot/helpers',
-    // 'boot/model',
-    // 'boot/ref',
-    // 'boot/i18n',
+    {
+      type: 'category',
+      label: '应用框架',
+      items: [
+        'boot/intro',
+        'boot/app-spec',
+        'boot/tango-config',
+        'boot/app',
+        'boot/service',
+        'boot/store',
+        'boot/page',
+        'boot/global',
+        // 'boot/helpers',
+        // 'boot/model',
+        // 'boot/ref',
+        // 'boot/i18n',
+      ],
+      collapsed: false,
+    },
   ],
 
   // protocol: ['protocol/material-protocol', 'protocol/material-package-spec'],

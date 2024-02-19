@@ -4,7 +4,8 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: '使用 Tango 构建你的低代码生产力工具',
-  tagline: '基于源代码 AST 实现可视化搭建操作，支持实时出码，不受私有 DSL 和协议限制',
+  tagline:
+    '基于源代码 AST 实现可视化搭建操作，支持实时出码，不受私有 DSL 和协议限制',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
@@ -83,10 +84,9 @@ const config = {
             label: '文档',
           },
           {
-            type: 'docSidebar',
-            sidebarId: 'boot',
+            href: 'https://netease.github.io/tango/index.html',
+            label: 'API',
             position: 'left',
-            label: '应用框架',
           },
           { to: '/blog', label: '博客', position: 'left' },
           {
