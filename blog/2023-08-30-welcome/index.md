@@ -64,8 +64,8 @@ Tango 低代码引擎是网易云音乐内部低代码平台的核心构件，�
 
 我们的开源工作正在积极推进中，可以通过如下的信息了解到我们的最新进展：
 
-- Github 仓库：<https://github.com/NetEase/tango>
-- 文档站点：<https://netease.github.io/tango/>
+- Github 仓库：https://github.com/NetEase/tango
+- 文档站点：https://netease.github.io/tango/
 
 欢迎大家加入到我们的社区中来，一起参与到 Tango 低代码引擎的开源建设中来。有任何问题都可以通过 [Github Issues](https://github.com/NetEase/tango/issues) 反馈给我们，我们会及时跟进处理。
 

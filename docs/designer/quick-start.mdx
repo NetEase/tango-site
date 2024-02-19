@@ -10,8 +10,8 @@ Tango 是一个用于快速构建低代码平台的低代码设计器框架，�
 
 ## 环境要求
 
-- 安装 node 16.0.0 以上版本: <https://nodejs.org/en/download/>
-- 安装 npm 8.x 或 yarn 1.x: <https://classic.yarnpkg.com/en/docs/getting-started>
+- 安装 node 16.0.0 以上版本: https://nodejs.org/en/download/
+- 安装 npm 8.x 或 yarn 1.x: https://classic.yarnpkg.com/en/docs/getting-started
 
 ## 启动 Tango Playground
 
@@ -28,7 +28,7 @@ Tango 是一个用于快速构建低代码平台的低代码设计器框架，�
     yarn install
     yarn start
     ```
-4.  打开浏览器访问 <https://local.netease.com:6006> 并允许不安全的证书
+4.  打开浏览器访问 https://local.netease.com:6006 并允许不安全的证书
 
 ## 启动本地沙箱
 
@@ -56,11 +56,11 @@ Tango 是一个用于快速构建低代码平台的低代码设计器框架，�
     yarn build:sandpack
     ```
     你也可以从 [这里](https://github.com/NetEase/codesandbox-client/releases) 下载预构建的沙箱产物，创建 `www` 子文件夹并将压缩包解压到该文件夹内
-5.  使用 Caddy 托管构建沙箱后的静态文件，若本地没有 Caddy 可前往 <https://caddyserver.com/download> 下载
+5.  使用 Caddy 托管构建沙箱后的静态文件，若本地没有 Caddy 可前往 https://caddyserver.com/download 下载
     ```sh
     caddy run
     ```
-6.  打开浏览器访问 <https://local.netease.com:8443> 并允许不安全的证书
+6.  打开浏览器访问 https://local.netease.com:8443 并允许不安全的证书
 7.  修改 `apps/playground/src/pages/index.tsx`，找到 `<Sandbox />` 组件，将 `bundlerURL` 修改为 `https://local.netease.com:8443`
     ```jsx
     <Sandbox bundlerURL="https://local.netease.com:8443" />
