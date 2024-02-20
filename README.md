@@ -1,6 +1,8 @@
 # Tango Website
 
-This website is built using [Docusaurus](https://docusaurus.io/), a modern static website generator.
+This repo is documentation site for [netease/tango](https://github.com/NetEase/tango) project.
+
+Site link: <https://netease.github.io/tango-site/>
 
 ### Installation
 
