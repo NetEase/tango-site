@@ -3,9 +3,8 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: '使用 Tango 构建你的低代码生产力工具',
-  tagline:
-    '基于源代码 AST 实现可视化搭建操作，支持实时出码，不受私有 DSL 和协议限制',
+  title: '基于源码的低代码引擎',
+  tagline: '基于你的已有代码库实现可视化搭建操作，实时出码，无私有搭建协议',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
@@ -26,8 +25,8 @@ const config: Config = {
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
   i18n: {
-    defaultLocale: 'zh-CN',
-    locales: ['zh-CN'],
+    defaultLocale: 'zh-Hans',
+    locales: ['zh-Hans'],
   },
 
   presets: [
@@ -55,16 +54,18 @@ const config: Config = {
     ],
   ],
 
+  plugins: [require.resolve('docusaurus-lunr-search')],
+
   themeConfig: {
     // Replace with your project's social card
     image: 'img/social-card.png',
-    announcementBar: {
-      id: 'notion_alert',
-      content: '🏗 当前版本为 alpha 版本，相关文档正在编写之中，敬请期待！',
-      backgroundColor: 'var(--ifm-color-primary-contrast-background)',
-      textColor: 'var(--ifm-color-primary-contrast-foreground)',
-      isCloseable: false,
-    },
+    // announcementBar: {
+    //   id: 'notion_alert',
+    //   content: '🏗 当前版本为 alpha 版本，相关文档正在编写之中，敬请期待！',
+    //   backgroundColor: 'var(--ifm-color-primary-contrast-background)',
+    //   textColor: 'var(--ifm-color-primary-contrast-foreground)',
+    //   isCloseable: false,
+    // },
     navbar: {
       title: '',
       logo: {

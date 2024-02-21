@@ -43,7 +43,6 @@ function HomepageHeader() {
             src="https://p6.music.126.net/obj/wonDlsKUwrLClGjCm8Kx/30108642346/b8cf/e86d/ef5a/514d90b722b5d8dc0e18516ed594a07b.png"
             alt="preview"
           />
-          d
         </div>
       </div>
     </header>
