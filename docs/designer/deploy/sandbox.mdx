@@ -73,7 +73,7 @@ Tango 封装了一份标准的沙箱实现 `@music163/tango-sandbox`，在与 Ta
 
 ### CodeSandboxProps
 
-如果你需要直接使用沙箱组件，可以参考如下常用的 props 定义，这些 props 主要暴露了 CodeSandbox 内部的一些参数，以及封装了 Tango 所需的事件回调方法。
+如果你需要直接使用沙箱组件，可以参考如下常用的 props 定义，这些 props 主要暴露了 CodeSandbox 内部的一些参数，以及封装了 Tango 所需的事件回调方法。不过这些参数仅是简单透出而已，不代表这些参数能兼容 Tango 的设计器，例如在 Tango 的设计器里 `template` 应该始终为 `create-react-app`，因为 Tango 目前仅支持 React 的 JavaScript 应用搭建。
 
 | 属性              | 说明                                         | 类型                                                                                | 默认值              |
 |-------------------|----------------------------------------------|-------------------------------------------------------------------------------------|---------------------|
@@ -113,7 +113,8 @@ Tango 预置的沙箱方案是基于 [CodeSandbox](https://github.com/codesandbo
 1.  克隆代码仓库到本地：
 
     ```sh
-    git clone https://github.com/NetEase/codesandbox-client.git
+    # 由于代码仓库较大，为节省时间，此处指定了 --depth 1
+    git clone https://github.com/NetEase/codesandbox-client.git --depth 1
     ```
 
 2.  安装依赖：
