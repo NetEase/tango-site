@@ -2,6 +2,52 @@
 
 介绍一个基本的服务端实现，以及如何接入。
 
-:::tip
-正在编写中，敬请期待。
-:::
+
+## 项目代码获取
+
+你可以编写一个简单的 HTTP 接口，用于从上游仓库（如 GitHub、GitLab 等）获取项目的源代码。在设计器初始化时，你需要将项目的源代码传入 [`new Workspace()`](https://netease.github.io/tango/classes/_music163_tango_core.Workspace.html) 的 `files` 参数中。
+
+```ts
+const workspace = new Workspace({
+  entry: '/src/index.js',
+  files: filesFromRemote,
+});
+const engine = createEngine({
+  workspace,
+});
+```
+
+传入的 `files` 参数应满足 [`IFileConfig[]`](https://netease.github.io/tango/interfaces/_music163_tango_core.IFileConfig.html) 的定义，即一个各项均存在 `filename` 与 `code` 字段的对象的数组。如果你需要更完整的定义，可参考示例应用的 [`mock-files.ts`](https://github.com/NetEase/tango/blob/main/apps/playground/src/helpers/mock-files.ts) 文件。
+
+下面是服务端需返回的 `files` 参数的示例：
+
+```js
+[
+  {
+    "filename": "/package.json",
+    "code": "{\n  \"name\": \"demo\"\n}"
+  },
+  {
+    "filename": "/tango.config.json",
+    "code": "{\n  \"packages\": {}\n}"
+  },
+  {
+    "filename": "/src/index.js",
+    "code": "import { runApp } from '@music163/tango-boot';\nimport routes from './routes';\nimport './services';\nimport './stores';\nimport './index.less';\n\nrunApp({\n  boot: {\n    mountElement: document.querySelector('#root'),\n    qiankun: false,\n  },\n\n  router: {\n    type: 'browser',\n    config: routes,\n  },\n});"
+  },
+  // ......
+]
+```
+
+## 项目代码推送
+
+在设计器内完成项目的开发完成后，你可以通过 `workspace.listFiles()` 方法或 `workspace.files` 参数获取设计器内存储的项目源代码：
+
+```ts
+// 直接访问设计器存储的文件列表 map 对象
+const files: Map<string, TangoFile> = workspace.files;
+// 或者调用方法获取最终的源码
+const files: Record<string, string> = workspace.listFiles();
+```
+
+获取到完整源码后，你可以编写一个简单的 HTTP 接口，用于将代码写入上游仓库（如 GitHub、GitLab 等）。在前端你可以将获取源码与提交的逻辑绑定在设计器右上角发布按钮的 `onClick` 事件内，当用户点击右上角的发布按钮后将代码推送至远程仓库。

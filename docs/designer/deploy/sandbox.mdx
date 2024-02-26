@@ -10,10 +10,683 @@ Tango 沙箱由三个部分构成，包括低代码沙箱前端组件、在线�
 - 在线打包器：提供搭建产物的浏览器端构建能力，类似于一个浏览器版本的 webpack，此部分逻辑主要来自于 [sandpack](https://sandpack.codesandbox.io/) 项目。
 - 沙箱后端服务：对依赖的资源进行预构建，以及提供资源合并等服务，用来加速沙箱内部的构建打包过程。
 
+:::tip  
+在接入前，请确认本地或服务器上已经安装了 Node.js 与 npm/yarn，且 Node.js 的版本大于等于 16。若本地没有安装 Node.js 或版本不满足需求，可以使用 [nvm](https://github.com/nvm-sh/nvm) 来安装并实现多版本管理。
+
+```sh
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+nvm install 16
+nvm use 16
+npm install --global yarn
+```
+
+:::
+
+
 ## 沙箱的前端组件接入
 
-WIP
+Tango 封装了一份标准的沙箱实现 `@music163/tango-sandbox`，在与 Tango 设计器一同使用时，你只需要传入 `bundlerURL` 指定沙箱地址即可。
+
+<details>
+<summary>点击展开代码</summary>
+
+```jsx
+<Designer engine={engine} sandboxQuery={sandboxQuery}>
+  <DesignerPanel>
+    <Sidebar></Sidebar>
+    <WorkspacePanel>
+      <WorkspaceView mode="design">
+        <Sandbox
+          // 将 bundlerURL 替换为已部署的沙箱的地址
+          bundlerURL="https://sandbox.example.com"
+          // 从沙箱的全局变量中获取挂载的 UMD 组件库的 menuData 与 prototypes 信息
+          // 如果上述信息可以通过其他方式获取到，你也可以直接调用相关方法注册
+          onMessage={(e) => {
+            if (e.type === 'done') {
+              const sandboxWindow: any = sandboxQuery.window;
+              if (sandboxWindow.TangoAntd) {
+                if (sandboxWindow.TangoAntd.menuData) {
+                  setMenuData(sandboxWindow.TangoAntd.menuData);
+                }
+                if (sandboxWindow.TangoAntd.prototypes) {
+                  workspace.setComponentPrototypes(sandboxWindow.TangoAntd.prototypes);
+                }
+              }
+              if (sandboxWindow.localTangoComponentPrototypes) {
+                workspace.setComponentPrototypes(sandboxWindow.localTangoComponentPrototypes);
+              }
+              setMenuLoading(false);
+            }
+          }}
+        />
+      </WorkspaceView>
+      <WorkspaceView mode="code">
+        <CodeEditor />
+      </WorkspaceView>
+    </WorkspacePanel>
+    <SettingPanel />
+  </DesignerPanel>
+</Designer>
+```
+
+</details>
+
+### CodeSandboxProps
+
+如果你需要直接使用沙箱组件，可以参考如下常用的 props 定义，这些 props 主要暴露了 CodeSandbox 内部的一些参数，以及封装了 Tango 所需的事件回调方法。不过这些参数仅是简单透出而已，不代表这些参数能兼容 Tango 的设计器，例如在 Tango 的设计器里 `template` 应该始终为 `create-react-app`，因为 Tango 目前仅支持 React 的 JavaScript 应用搭建。
+
+| 属性              | 说明                                         | 类型                                                                                | 默认值              |
+|-------------------|----------------------------------------------|-------------------------------------------------------------------------------------|---------------------|
+| bundlerURL        | 沙箱地址                                     | `string`                                                                            | -                   |
+| iframeId          | iframe 唯一标识符，当有多个实例的时候必须要传 | `string`                                                                            | `sandbox-container` |
+| template          | 模板类型                                     | `angular-cli` \| `create-react-app` \| `create-react-app-typescript` \| `svelte` \| `parcel` \| `vue-cli` \| `static` \| `solid` | `create-react-app` |
+| moduleType        | 模块类型                                     | `esm` \| `cjs`                                                                      | -                   |
+| files             | 文件列表                                     | `{ [path: string]: { code: string } }`                                              | -                   |
+| entry             | 入口文件                                     | `string`                                                                            | `/index.js`         |
+| dependencies      | 依赖信息                                     | `{ [depName: string]: string }`                                                     | -                   |
+| externalResources | 单独注入的 JS 与 CSS 资源                    | `string[]`                                                                          | -                   |
+| startRoute        | 起始路由                                     | `string`                                                                            | `/`                 |
+| routerMode        | 路由类型                                     | `history` \| `hash`                                                                 | `history`           |
+| eventHandlers     | 事件监听                                     | `{ [path: string]: (e: Event) => void }`                                            | -                   |
+| onFileChange      | 文件发生变更时触发事件                       | `(files: { [path: string]: { code: string } }, sandpack: ISandpackContext) => void` | -                   |
+| onMessage         | 沙箱消息监听事件                             | `(frame: HTMLIFrameElement) => void`                                                | -                   |
+| style             | 沙箱样式                                     | `React.CSSProperties`                                                               | -                   |
+
+
+## 在线打包器
+
+Tango 预置的沙箱方案是基于 [CodeSandbox](https://github.com/codesandbox/codesandbox-client) 实现的，并在之上做了适配 Tango 的修改，你可以在 [这里](https://github.com/NetEase/codesandbox-client) 查看我们修改后的实现。由于沙箱的能力并不属于 Tango 的核心部分，因此你需要单独部署 CodeSandbox 的沙箱服务。
+
+
+### 准备沙箱产物
+
+#### 使用预构建的资源
+
+我们的代码仓库配置了 GitHub Actions，它会在代码变更时自动构建沙箱，然后将最终的产物上传至 GitHub Releases。
+
+你可以直接在 [这里](https://github.com/NetEase/codesandbox-client/releases) 下载最新版本的产物，下载后将其解压至 `./www` 目录下即可。
+
+#### 手动构建
+
+如你需要对沙箱做一些修改（例如私有化部署了相关服务，需要修改请求地址），你可以通过 clone 代码仓库到本地，然后执行指令构建产物。
+
+1.  克隆代码仓库到本地：
+
+    ```sh
+    # 由于代码仓库较大，为节省时间，此处指定了 --depth 1
+    git clone https://github.com/NetEase/codesandbox-client.git --depth 1
+    ```
+
+2.  安装依赖：
+
+    ```sh
+    cd codesandbox-client
+    yarn
+    ```
+
+3.  修改代码并测试。
+
+4.  构建产物：
+
+    ```sh
+    yarn build:deps
+    yarn build:sandpack
+    ```
+
+5. 构建完成后，你可以在 `./www` 下找到最终构建的产物。
+
+
+### 部署沙箱
+
+:::tip  
+CodeSandbox 的沙箱服务需要确保部署环境支持 HTTPS 访问。你需要一个可自主控制的域名，并为其获取有效的 SSL 证书。你可以使用 Let's Encrypt 或 ZeroSSL 等方法获取证书，或者使用主机服务提供商提供的 HTTPS 方案。
+
+对于本地开发等无法准备有效 SSL 证书的情况，你可以将域名在 hosts 文件里指向 `127.0.0.1`，然后使用 Caddy 提供的自签发证书功能（该配置已预置在仓库的 `Caddyfile` 中），或者使用下面的命令手动生成证书并添加信任，然后将其写入配置文件：
+
+```sh
+# 为 example.com 及其子域名生成一个有效期 10 年的自签发证书
+# 自签证书默认不会被浏览器信任，只能用于本地开发，线上部署请使用合法的 SSL 证书
+openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+  -subj "/CN=example.com" -addext "subjectAltName=DNS:example.com,DNS:*.example.com" \
+  -keyout example.com.key -out example.com.crt
+```
+
+:::
+
+#### 使用 Caddy 部署
+
+我们在项目内部提供了一个 Caddy 配置文件，你可以在这个配置文件中调整参数，然后使用 Caddy 启动服务器。
+
+1.  从 [Caddy 的下载页面](https://caddyserver.com/download) 下载可执行文件，或参考 [Caddy 的文档](https://caddyserver.com/docs/install) 了解其他安装方式。
+
+2.  确保构建产物位于 `./www` 目录下，且当前目录下存在 `Caddyfile` 文件。如果你是直接从 Releases 页面下载的沙箱产物，可以从 [这里](https://github.com/NetEase/codesandbox-client/raw/master/Caddyfile) 下载最新的 `Caddyfile` 文件。
+
+3.  将沙箱运行的域名的 DNS 记录解析到你的服务器的 IP 地址；如果你是在本地开发，你可以在 hosts 文件里将测试的域名指向 `127.0.0.1`。
+
+4.  如果你需要使用 Caddy 的自动 HTTPS 功能（包括本地开发），请将 `Caddyfile` 里的 `:8080` 替换为你自己的域名，Caddy 会为该域名自动签发 SSL 证书；如果你在服务上游有其他代理服务器负责处理 HTTPS，则可以不做修改，但请确认上游服务器代理的端口与 `Caddyfile` 里的端口保持一致。
+
+5.  在 4 开启了 HTTPS 功能的基础上，如果你需要 Caddy [自动签发合法的 HTTPS 证书](https://caddyserver.com/docs/automatic-https) （而不是本地开发用的自签证书），请将 `Caddyfile` 里的 `local_certs` 一行删除；如果需要手动指定证书，请参考 [Caddy 文档](https://caddyserver.com/docs/caddyfile/options#tls-options)。
+
+6.  Caddy 的配置文件里默认监听的 HTTP 端口是 `8080` 端口，HTTPS 则是 `8443` 端口，如果需要修改为默认的 `80` 与 `443` 端口，请修改 `Caddyfile` 里的 `http_port` 与 `https_port`。
+
+7.  如果一切准备就绪，你可以使用下面的指令启动 Caddy：
+
+    ```sh
+    caddy run
+    ```
+
+8.  部署完成后，在浏览器上访问你配置的域名端口，例如若你在 4 里将域名改为 `local.example.com`，则访问 `https://local.example.com:8443` 即可。若浏览器的标题栏显示为 _Sandbox - CodeSandbox_ 则表示部署成功。
+
+#### 使用 Docker 部署
+
+我们在项目内部提供了一个 `Dockerfile`，它会自动从源码构建产物，并自动使用 Caddy 的 Docker 镜像部署。你可以在部署前按照上面的步骤按需修改 `Caddyfile` 文件，然后使用下面的指令构建镜像并启动容器：
+
+```sh
+docker build -t tango-codesandbox .
+docker run -p 8443:8443 tango-codesandbox
+```
+
+#### 使用 nginx 部署
+
+如果你更熟悉 nginx，可以参考 [这里](https://github.com/NetEase/tango/issues/84#issuecomment-1878229696) 的配置修改，然后将 SSL 证书更新至配置中，或是通过 Certbot 或 acme.sh 等工具签发证书并自动修改 nginx 配置。
+
+
+### 常见问题
+
+- **沙箱部署后显示白屏，并在控制台提示 `Error: Can't detect sandbox ID from the current URL`**  
+
+    这是正常情况，沙箱需要引擎传入代码后才能正常执行，只需确认浏览器的标题栏显示为 _Sandbox - CodeSandbox_ 即可。
+
+- **沙箱部署必须要启用 HTTPS 吗？**  
+
+    是的，因为 CodeSandbox 会注册 Service Worker 来处理请求缓存。此外由于 Chrome 的 [安全策略](https://developer.chrome.com/blog/document-domain-setter-deprecation) 限制，若需要与不同域名的 iframe 通过修改 `document.domain` 通信，必须在 top 与 iframe 的 HTTP 响应头中添加 `Origin-Agent-Cluster: ?0` 响应头，而且该响应头仅在 HTTPS 下生效。
+
+- **本地开发没有合法的 SSL 证书该怎么办？**
+
+    你可以在操作系统的 hosts 文件里将任意域名指向 `127.0.0.1`，并为该域名签发自签证书。Caddy 会在配置文件中指定了访问域名的情况下自动签发证书，并自动将 CA 证书加入当前设备的可信根证书，因此你不需要再做其他操作。不过如果你使用了其他的部署方案，或者有自己的理由自行签发证书，可以使用下面的指令创建证书：
+
+    ```sh
+    # 为 example.com 及其子域名生成一个有效期 10 年的自签发证书
+    openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+      -subj "/CN=example.com" -addext "subjectAltName=DNS:example.com,DNS:*.example.com" \
+      -keyout example.com.key -out example.com.crt
+    ```
+
+    需要注意的是，在线上使用时，你必须提供一个可以被浏览器信任的合法的 SSL 证书。
+
+- **我无法在 Tango 设计器里选中或拖拽沙箱里的组件**  
+
+    这是因为 Tango 设计器的沙箱是通过 iframe 嵌入的，而 iframe 的安全策略是不允许跨域访问的，所以 Tango 与沙箱会通过修改 `document.domain` 为同级域名的方式来实现跨域访问。
+
+    首先请确认 Tango 的设计器与沙箱所属的域名都是同级域名的子域名。例如你可以将设计器部署在 `tango.example.com` 下，然后将沙箱部署在 `sandbox.example.com` 下，由于他们都是 `example.com` 的子域名，所以两者可以通过修改 `document.domain` 实现跨域访问。
+    
+    如果他们已经位于同级域名下，请确认 Tango 设计器与沙箱 iframe 的页面请求的 HTTP 响应头中均包含 `Origin-Agent-Cluster: ?0`，只有当服务器返回该响应头时，Chrome 才能正常修改 `document.domain`。
+
+    如果上述步骤均已确认无误，这可能是浏览器的缓存问题，可尝试重启浏览器后重新访问。
+
 
 ## 沙箱的后端服务接入
 
-WIP
+CodeSandbox 使用了自己的 [dependency-packager](https://github.com/codesandbox/dependency-packager) 服务以及 [JSDelivr](https://www.jsdelivr.com/) 与 [unpkg](https://www.unpkg.com/) 实现在线获取依赖。因此，沙箱默认仅支持从公开的 npm 仓库里获取依赖。如果你需要支持私有 npm 仓库里的依赖，需要自行部署上述后端服务，并修改 CodeSandbox 的相关源码。
+
+:::tip  
+本章节主要是面向有私有 npm registry 访问需求的用户（如组织内部的私有依赖），如果没有相关场景，可以忽略本节，默认使用 CodeSandbox 提供的服务。
+
+使用自建服务需要修改 CodeSandbox 的相关源码，因此你需要克隆我们修改后的 [codesandbox-client](https://github.com/NetEase/codesandbox-client)，然后参考上一节的“手动构建”步骤生成产物。
+
+:::
+
+### 部署 dependency-packager
+
+[dependency-packager](https://github.com/codesandbox/dependency-packager) 是 CodeSandbox 的打包服务，它会在服务端下载并安装依赖，然后将该依赖包括子依赖所需的文件一次性全部返回，减少前端拉取依赖的时间。
+
+
+:::warning  
+dependency-packager 是基于 Amazon Lambda 开发的 Serverless 服务，并使用了 Amazon S3 作为缓存。虽然 packager 可以不依赖上述能力直接运行，但是 packager 的缓存能力也会因此失效，这也代表着每次获取资源时，packager 都会重新安装一次依赖。因此，在线上使用时你需要提供足够完善的缓存能力，例如将 S3 替换为其他服务、使用前置代理缓存或 CDN、修改源码实现持久化缓存等。
+
+:::
+
+1.  克隆代码仓库到本地：
+
+    ```sh
+    git clone https://github.com/codesandbox/dependency-packager.git
+    ```
+
+2.  安装依赖：
+
+    ```sh
+    cd dependency-packager
+    yarn
+    ```
+
+3.  packager 的依赖是通过 yarn 安装到本地后再提取文件的，因此你只需要修改 npm 与 yarn 的 registry 即可。
+
+    ```sh
+    npm config set registry https://registry.npmmirror.com/
+    yarn config set registry https://registry.npmmirror.com/
+    ```
+
+    :::tip  
+    packager 在获取依赖时会将环境变量 `HOME` 指向 `/tmp`。如果你不是使用 docker 部署，并且使用了 nvm 来管理 Node.js，可能会遇到配置不生效的情况。你可以修改 `functions/packager/dependencies/install-dependencies.ts` 去掉 `HOME` 环境变量。
+
+    此外，packager 会将依赖安装到 `/tmp` 目录下，并会在安装依赖时清理该目录。如果你不是使用 docker 部署，并且系统内有其他应用运行，可能会影响其他应用的正常工作。你可以修改 `functions/packager/index.ts` 并批量替换 `/tmp` 为希望存储的路径。
+
+    线上使用时推荐直接使用 dependency-packager 提供的 `Dockerfile` 部署，可避免上述操作，只需将上述配置 registry 的代码以诸如 `RUN yarn config ...` 的方式写在 `Dockerfile` 最后的 `CMD` 指令之前即可。
+
+    :::
+
+4.  构建项目：
+
+    ```sh
+    yarn build
+    ```
+
+    如遇构建失败，可以尝试应用下面的 patch：
+
+    <details>
+    <summary>点击展开代码</summary>
+
+    该 patch 移除了上报 Sentry 的代码，并且禁用了 `node_modules` 下的 TypeScript 类型检查。
+
+    ```patch
+    diff --git a/functions/packager/index.ts b/functions/packager/index.ts
+    index 81f33ef..3c0a876 100644
+    --- a/functions/packager/index.ts
+    +++ b/functions/packager/index.ts
+    @@ -3,7 +3,6 @@ import { S3 } from "aws-sdk";
+     
+     import { fs } from "mz";
+     import * as path from "path";
+    -import * as Raven from "raven";
+     import * as rimraf from "rimraf";
+     import * as zlib from "zlib";
+     import fetch from "node-fetch";
+    @@ -17,7 +16,6 @@ import findRequires, { IFileData } from "./packages/find-requires";
+     import getHash from "./utils/get-hash";
+     
+     import { VERSION } from "../config";
+    -import env from "./config.secret";
+     import resolve = require("resolve");
+     import { packageFilter } from "./utils/resolver";
+     import { execSync } from "child_process";
+    @@ -25,10 +23,6 @@ import { execSync } from "child_process";
+     const { BUCKET_NAME } = process.env;
+     const SAVE_TO_S3 = !process.env.DISABLE_CACHING;
+     
+    -if (env.SENTRY_URL) {
+    -  Raven.config(env.SENTRY_URL!).install();
+    -}
+    -
+     const s3 = new S3();
+     
+     /**
+    @@ -264,13 +258,6 @@ export async function call(event: any, context: Context, cb: Callback) {
+     
+         console.error("ERROR", e);
+     
+    -    Raven.captureException(e, {
+    -      tags: {
+    -        hash,
+    -        dependency: `${dependency.name}@${dependency.version}`,
+    -      },
+    -    });
+    -
+         if (process.env.IN_LAMBDA) {
+           // We try to call fly, which is a service with much more disk space, retry with this.
+           try {
+    diff --git a/tsconfig.json b/tsconfig.json
+    index 60d447e..9efccee 100644
+    --- a/tsconfig.json
+    +++ b/tsconfig.json
+    @@ -1,6 +1,7 @@
+     {
+       "compileOnSave": true,
+       "compilerOptions": {
+    +    "skipLibCheck": true,
+         /* Basic Options */
+         "target": "es6" /* Specify ECMAScript target version: 'ES3' (default), 'ES5', 'ES2015', 'ES2016', 'ES2017', or 'ESNEXT'. */,
+         "module": "commonjs" /* Specify module code generation: 'commonjs', 'amd', 'system', 'umd' or 'es2015'. */,
+
+    ```
+
+    </details>
+
+5.  部署并启动服务，其默认端口为 `4545`（`Dockerfile` 里为 `3000`），你也可以通过环境变量 `PORT` 指定端口。
+
+    ```sh
+    node dist/packager
+    ```
+
+6.  确认 packager 服务可以正常访问，并能正常返回任意 npm 包。例如，你可以访问 `http://localhost:4545/react@17.0.2` 查看 React 及其子依赖的相关文件。
+
+### 部署 unpkg
+
+[unpkg](https://github.com/mjackson/unpkg) 是一个支持访问 npm 包内任意文件的服务，当 packager 没有打包某些文件时，会使用该服务兜底。
+
+:::warning  
+unpkg 自身没有缓存能力，每次资源请求都会请求上游 registry 下载依赖的 tar 包。因此，在线上使用时建议同 packager 一样提供足够完善的缓存能力，例如使用前置代理缓存或 CDN、修改源码实现持久化缓存等。
+
+:::
+
+1.  克隆代码仓库到本地：
+
+    ```sh
+    git clone https://github.com/mjackson/unpkg.git
+    ```
+
+2.  安装依赖：
+
+    ```sh
+    cd unpkg
+    yarn
+    ```
+
+    :::tip  
+    unpkg 需要 Node.js v12，你可能需要使用 nvm 切换 Node.js 版本，或尝试修改 `package.json` 中的 `engines.node` 为 `>=12` 来绕过版本检查。
+
+    :::
+
+3.  与 packager 不同，unpkg 需要通过环境变量 `NPM_REGISTRY_URL` 指定 registry：
+
+    ```sh
+    NPM_REGISTRY_URL=https://registry.npmmirror.com/
+    ```
+
+    你也可以通过修改 `modules/utils/npm.js` 文件，直接调整请求 registry 的逻辑。
+
+4.  unpkg 默认会调用 CloudFlare 的 API 获取统计信息，在私有化部署时需要移除相关能力，否则会无法启动。你可以直接应用下面的 patch 移除该功能：
+
+    <details>
+    <summary>点击展开代码</summary>
+
+    该 patch 移除了会调用 CloudFlare API 的 `serveStats` 方法，以及对应的 `/api/stats` 接口。
+
+    ```patch
+    diff --git a/modules/createServer.js b/modules/createServer.js
+    index b8f8f95..d66a0bb 100644
+    --- a/modules/createServer.js
+    +++ b/modules/createServer.js
+    @@ -9,7 +9,6 @@ import serveFileMetadata from './actions/serveFileMetadata.js';
+     import serveFile from './actions/serveFile.js';
+     import serveMainPage from './actions/serveMainPage.js';
+     import serveModule from './actions/serveModule.js';
+    -import serveStats from './actions/serveStats.js';
+     
+     import allowQuery from './middleware/allowQuery.js';
+     import findEntry from './middleware/findEntry.js';
+    @@ -43,7 +42,6 @@ export default function createServer() {
+         app.use(requestLog);
+     
+         app.get('/', serveMainPage);
+    -    app.get('/api/stats', serveStats);
+     
+         app.use(redirectLegacyURLs);
+    
+    ```
+
+    </details>
+
+5.  构建项目：
+
+    ```sh
+    yarn build
+    ```
+
+6.  部署并启动服务，其默认端口为 `8080`，你也可以通过环境变量 `PORT` 指定端口。
+
+    ```sh
+    yarn serve
+    ```
+
+7.  确认 unpkg 服务可以正常访问，并能正常返回任意 npm 包内的文件。例如，你可以访问 `http://localhost:8080/react@17.0.2/umd/react.production.min.js` 查看 React 这个包下的指定文件。
+
+
+### HTTPS 访问
+
+上述服务仅提供基本的 HTTP 请求，为了与 CodeSandbox 配合使用，这些服务均需支持通过 HTTPS 访问。和之前提到的部署 CodeSandbox 的流程类似，你需要准备好可以通过 HTTPS 访问的域名及其合法的 SSL 证书，然后通过 [Caddy](https://caddyserver.com/docs/quick-starts/reverse-proxy#https-from-client-to-proxy) 或 [nginx](https://nginx.org/en/docs/http/ngx_http_proxy_module.html) 等方案实现反向代理，并提供 HTTPS 访问能力。
+
+此外，由于上述服务会部署在单独的域名上，在沙箱内请求时会遇到跨域问题，因此你还需要让反向代理返回 `Access-Control-Allow-Origin` 的 HTTP 响应头。你也可以在这一层实现请求缓存，从而减少原服务的请求，提升访问速度。
+
+下面是一份示例的 Caddy 服务器配置：
+
+```conf
+packager.example.com {
+    header ?Access-Control-Allow-Origin *
+    reverse_proxy localhost:4545 {
+        header_up Host {host}
+    }
+}
+```
+
+下面是一份示例的 nginx 服务器配置：
+
+```conf
+server {
+    listen          80;
+    listen          443 ssl;
+    server_name     packager.example.com;
+
+    ssl_certificate             /path/to/example.com.crt;
+    ssl_certificate_key         /path/to/example.com.key;
+    ssl_ciphers                 HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers   on;
+
+    location / {
+        proxy_pass http://localhost:4545;
+        proxy_set_header Host $http_host;
+        proxy_hide_header Access-Control-Allow-Origin;
+        add_header Access-Control-Allow-Origin "*" always;
+    }
+}
+```
+
+
+### 修改沙箱请求资源
+
+完成上述服务的部署后，你需要修改 CodeSandbox 的源码，将源码中写死的请求地址修改为对应的服务。由于涉及的修改比较杂乱，为了方便修改，你可以使用下面的 patch 文件来简化修改操作：
+
+<details>
+<summary>点击展开代码</summary>
+
+下面的 patch 文件假设你已将 unpkg 服务部署于 `https://unpkg.example.com`，将 dependency-packager 部署于 `https://packager.example.com`。你需要将文件中上述地址的域名部分（`unpkg.example.com` 与 `packager.example.com`），以及其对应的正则表达式（`unpkg\.example\.com` 与 `packager\.example\.com`）替换为你部署的服务的域名。
+
+```patch
+diff --git a/packages/app/config/webpack.prod.js b/packages/app/config/webpack.prod.js
+index 53243702c..7d48b82d2 100644
+--- a/packages/app/config/webpack.prod.js
++++ b/packages/app/config/webpack.prod.js
+@@ -139,7 +139,7 @@ module.exports = merge(commonConfig, {
+         //   },
+         // },
+         {
+-          urlPattern: /^https:\/\/unpkg\.com/,
++          urlPattern: /^https:\/\/unpkg\.example\.com/,
+           handler: 'cacheFirst',
+           options: {
+             cache: {
+@@ -272,7 +272,7 @@ module.exports = merge(commonConfig, {
+           },
+         },
+         {
+-          urlPattern: /prod-packager-packages\.codesandbox\.io/,
++          urlPattern: /packager\.example\.com/,
+           handler: 'cacheFirst',
+           options: {
+             cache: {
+@@ -285,7 +285,7 @@ module.exports = merge(commonConfig, {
+         },
+         // We resolve `package.json` to resolve versions (e.g. next -> 15.0.5). We need to have a much shorter cache on this
+         {
+-          urlPattern: /^https:\/\/unpkg\.com\/.*\/package.json/,
++          urlPattern: /^https:\/\/unpkg\.example\.com\/.*\/package.json/,
+           handler: 'networkFirst',
+           options: {
+             cache: {
+@@ -297,7 +297,7 @@ module.exports = merge(commonConfig, {
+           },
+         },
+         {
+-          urlPattern: /^https:\/\/unpkg\.com/,
++          urlPattern: /^https:\/\/unpkg\.example\.com/,
+           handler: 'cacheFirst',
+           options: {
+             cache: {
+diff --git a/packages/common/src/utils/dependencies.ts b/packages/common/src/utils/dependencies.ts
+index 91e8d2dd3..f3c15cf52 100644
+--- a/packages/common/src/utils/dependencies.ts
++++ b/packages/common/src/utils/dependencies.ts
+@@ -28,9 +28,7 @@ interface JsDelivrApiResult {
+ }
+ 
+ async function fetchAllVersions(dep: string): Promise<JsDelivrApiResult> {
+-  return fetchWithRetries<JsDelivrApiResult>(
+-    `https://data.jsdelivr.com/v1/package/npm/${dep}`
+-  );
++  throw new Error('Not implemented');
+ }
+ 
+ /** Resolves version range from unpkg, use this as a fallback when jsdelivr fails */
+@@ -39,7 +37,7 @@ const resolveVersionFromUnpkg = (
+   version: string
+ ): Promise<string> => {
+   return fetchWithRetries(
+-    `https://unpkg.com/${dep}@${encodeURIComponent(version)}/package.json`
++    `https://unpkg.example.com/${dep}@${encodeURIComponent(version)}/package.json`
+   ).then(x => x.version);
+ };
+ 
+diff --git a/packages/sandpack-core/src/npm/dynamic/fetch-protocols/index.ts b/packages/sandpack-core/src/npm/dynamic/fetch-protocols/index.ts
+index fc62a4c0e..14e16e54c 100644
+--- a/packages/sandpack-core/src/npm/dynamic/fetch-protocols/index.ts
++++ b/packages/sandpack-core/src/npm/dynamic/fetch-protocols/index.ts
+@@ -1,7 +1,6 @@
+ import { CSB_PKG_PROTOCOL } from '@codesandbox/common/lib/utils/ci';
+ import { CsbFetcher } from './csb';
+ import { UnpkgFetcher } from './unpkg';
+-import { JSDelivrNPMFetcher } from './jsdelivr/jsdelivr-npm';
+ import { isGithubDependency, JSDelivrGHFetcher } from './jsdelivr/jsdelivr-gh';
+ import { isTarDependency, TarFetcher } from './tar';
+ import { GistFetcher } from './gist';
+@@ -11,7 +10,6 @@ import { ProtocolTransformer } from './transformer';
+ let contributedProtocols: ProtocolDefinition[] = [];
+ 
+ export const preloadedProtocols = {
+-  jsdelivr: new JSDelivrNPMFetcher(),
+   unpkg: new UnpkgFetcher(),
+ };
+ 
+@@ -45,9 +43,8 @@ const protocols: ProtocolDefinition[] = [
+   },
+   {
+     protocol: preloadedProtocols.unpkg,
+-    condition: (_name, _version, useFallback) => useFallback,
++    condition: (_name, _version, useFallback) => true,
+   },
+-  { protocol: preloadedProtocols.jsdelivr, condition: () => true },
+ ];
+ 
+ export type ProtocolDefinition = {
+diff --git a/packages/sandpack-core/src/npm/dynamic/fetch-protocols/unpkg.ts b/packages/sandpack-core/src/npm/dynamic/fetch-protocols/unpkg.ts
+index 12814a721..822707d59 100644
+--- a/packages/sandpack-core/src/npm/dynamic/fetch-protocols/unpkg.ts
++++ b/packages/sandpack-core/src/npm/dynamic/fetch-protocols/unpkg.ts
+@@ -25,14 +25,14 @@ function normalize(files: UnpkgMetaFiles[], fileObject: Meta = {}) {
+ 
+ export class UnpkgFetcher implements FetchProtocol {
+   async file(name: string, version: string, path: string): Promise<string> {
+-    const url = `https://unpkg.com/${name}@${version}${path}`;
++    const url = `https://unpkg.example.com/${name}@${version}${path}`;
+     const result = await fetchWithRetries(url).then(x => x.text());
+ 
+     return result;
+   }
+ 
+   async meta(name: string, version: string): Promise<Meta> {
+-    const url = `https://unpkg.com/${name}@${version}/?meta`;
++    const url = `https://unpkg.example.com/${name}@${version}/?meta`;
+     const result: UnpkgMetaFiles = await fetchWithRetries(url).then(x =>
+       x.json()
+     );
+diff --git a/packages/sandpack-core/src/npm/index.ts b/packages/sandpack-core/src/npm/index.ts
+index c52a97da3..c6ebe4f61 100644
+--- a/packages/sandpack-core/src/npm/index.ts
++++ b/packages/sandpack-core/src/npm/index.ts
+@@ -21,7 +21,6 @@ export type NPMDependencies = {
+ };
+ 
+ const PRELOADED_PROTOCOLS = [
+-  preloadedProtocols.jsdelivr,
+   preloadedProtocols.unpkg,
+ ];
+ 
+diff --git a/packages/sandpack-core/src/npm/preloaded/fetch-dependencies.ts b/packages/sandpack-core/src/npm/preloaded/fetch-dependencies.ts
+index 3e2ab1a92..073e49314 100644
+--- a/packages/sandpack-core/src/npm/preloaded/fetch-dependencies.ts
++++ b/packages/sandpack-core/src/npm/preloaded/fetch-dependencies.ts
+@@ -11,7 +11,6 @@ const RETRY_COUNT = 60;
+ const MAX_RETRY_DELAY = 10_000;
+ const debug = _debug('cs:sandbox:packager');
+ 
+-const VERSION = 2;
+ 
+ // eslint-disable-next-line
+ const DEV_URLS = {
+@@ -23,7 +22,7 @@ const DEV_URLS = {
+ const PROD_URLS = {
+   packager:
+     'https://aiwi8rnkp5.execute-api.eu-west-1.amazonaws.com/prod/packages',
+-  bucket: 'https://prod-packager-packages.codesandbox.io',
++  bucket: 'https://packager.example.com'
+ };
+ 
+ const URLS = PROD_URLS;
+@@ -118,7 +117,7 @@ export async function getDependency(
+ 
+   const normalizedVersion = normalizeVersion(version);
+   const dependencyUrl = dependenciesToQuery({ [depName]: normalizedVersion });
+-  const fullUrl = `${BUCKET_URL}/v${VERSION}/packages/${depName}/${normalizedVersion}.json`;
++  const fullUrl = `${BUCKET_URL}/${depName}@${normalizedVersion}`;
+ 
+   if (externals[depName] && !NECESSARY_DEPENDENCIES.includes(depName)) {
+     return {
+diff --git a/standalone-packages/codesandbox-browserfs/src/backend/UNPKGRequest.ts b/standalone-packages/codesandbox-browserfs/src/backend/UNPKGRequest.ts
+index f83a3d9e1..9c12af6c7 100644
+--- a/standalone-packages/codesandbox-browserfs/src/backend/UNPKGRequest.ts
++++ b/standalone-packages/codesandbox-browserfs/src/backend/UNPKGRequest.ts
+@@ -120,7 +120,7 @@ export default class UNPKGRequest extends BaseFileSystem implements FileSystem {
+    * Construct an HTTPRequest file system backend with the given options.
+    */
+   public static Create(opts: UNPKGRequestOptions, cb: BFSCallback<UNPKGRequest>): void {
+-    const URL = `https://unpkg.com/${opts.dependency}@${opts.version}`;
++    const URL = `https://unpkg.example.com/${opts.dependency}@${opts.version}`;
+ 
+     asyncDownloadFile(`${URL}/?meta`, "json", (e, data: UNPKGMeta) => {
+       if (e) {
+@@ -413,7 +413,7 @@ export default class UNPKGRequest extends BaseFileSystem implements FileSystem {
+     if (filePath.charAt(0) === '/') {
+       filePath = filePath.slice(1);
+     }
+-    return `https://unpkg.com/${this.dependency}@${this.version}/${filePath}`;
++    return `https://unpkg.example.com/${this.dependency}@${this.version}/${filePath}`;
+   }
+ 
+   /**
+
+```
+
+</details>
+
+上面的 patch 主要做了如下操作：
+
+1. 将 unpkg 与 packager 服务的请求修改为私有化部署的地址
+2. 移除 JSDelivr 的相关请求，因为 JSDelivr 无法私有化部署，移除后将强制走 unpkg
+3. 将 Service Workers 内的缓存匹配规则修改为私有化部署的地址
+
+完成上述修改后，请参照之前的步骤重新构建沙箱产物并测试：
+
+```sh
+yarn build:deps
+yarn build:sandpack
+```
+
+如果上述修改没有问题，现在通过 Tango 设计器访问沙箱时，将会使用你指定的服务地址。
