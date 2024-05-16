@@ -92,13 +92,21 @@ const config: Config = {
         },
         {
           href: 'https://tango-demo.musicfe.com/designer/',
-          label: '演示应用',
+          target: '_blank',
+          label: 'Demo',
           position: 'right',
         },
         {
-          type: 'localeDropdown',
+          href: 'https://www.figma.com/community/plugin/1174548852019950797/seal-ai-powered-figma-to-code-react-rn-vue-html-d2c',
+          target: '_blank',
+          label: 'D2C',
           position: 'right',
+
         },
+        // {
+        //   type: 'localeDropdown',
+        //   position: 'right',
+        // },
       ],
     },
     footer: {

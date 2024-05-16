@@ -2,56 +2,76 @@
 
 属性设置器用于在配置面板中展示特定配置项的配置逻辑。Tango 内置了多种标准的属性设置器，对于一些特殊场景，内置的属性设置器可能无法满足你的需要，此时开发者可以扩展自己的属性设置。
 
-## 设置器组件
+## 设置器类型
 
-### SettingPanel
+Tango 的属性设置器分为两种类型：
 
-| 属性             | 说明                                   | 类型                         | 默认值 |
-| ---------------- | -------------------------------------- | ---------------------------- | ------ |
-| title            | 面板标题                               | string                       | -      |
-| defaultValue     | 默认值                                 | object                       | -      |
-| groupOptions     | 分组选项                               | object                       | -      |
-| model            | 表单状态管理实例                       | FormModel                    | -      |
-| onChange         | 值变化回调                             | (name, value, field) => void | -      |
-| prototype        | 组件的可配置描述                       | ComponentPrototype           | -      |
-| renderItemExtra  | 自定义渲染表单项的额外内容（标签右侧） | (props) => ReactNode         | -      |
-| showGroups       | 是否展示分组                           | boolean                      | -      |
-| showItemSubtitle | 是否展示表单项的副标题                 | boolean                      | -      |
-| showSearch       | 是否展示搜索框                         | boolean                      | -      |
+- **值设置器（value setter):** 设置器接收和返回的是一个具体的 javascript value 值，例如字符串、数字、布尔值、对象等。值设置器支持与代码设置器进行相互切换。
+- **代码设置器（code setter):** 设置器接收和返回的是一个 javascript 代码片段。
 
-## 内置属性设置器
+与之相对应的，在引擎的内核层，在解析属性值时，有两种策略：
 
-| 设置器名          | 接收值类型                           | 设置器说明                 | 可配置项           |
-| ----------------- | ------------------------------------ | -------------------------- | ------------------ |
-| eventSetter       | expression                           | 动作函数或事件监听器设置器 |                    |
-| actionListSetter  |                                      | ActionList 的 value 设置器 |                    |
-| boolSetter        | boolean                              | 布尔值设置器               |                    |
-| choiceSetter      | `{ label: string, value: string }[]` | RadioGroup 设置器          | - options 选项列表 |
-| pickerSetter      | `{ label: string, value: string }[]` | 下拉值设置器               | - options 选项列表 |
-| colorSetter       | string                               | 色彩                       |                    |
-| dateSetter        | string                               | 日期设置器                 |                    |
-| dateRangeSetter   | `string[]`                           | 日期范围设置器             |                    |
-| timeSetter        | `string`                             | 时间设置器                 |                    |
-| timeRangeSetter   | `string[]`                           | 时间范围设置器             |                    |
-| expressionSetter  | expression                           | 表达式设置器               |                    |
-| jsonSetter        | json expression                      | JSON 表达式设置器          |                    |
-| jsxSetter         | jsx expression                       | JSX 设置器                 |                    |
-| numberSetter      | number                               | 数字类型设置器             |                    |
-| textSetter        | string                               | 文本设置器                 |                    |
-| textAreaSetter    | string                               | 文本域设置器               |                    |
-| modelSetter       | string                               | 变量绑定设置器             |                    |
-| enumSetter        | enum                                 | 枚举值设置器               |                    |
-| sliderSetter      | number                               | 滑块设置器                 |                    |
-| listSetter        | `object[]`                           | 列表值设置器               |                    |
-| renderPropsSetter | Function                             | render props 设置器        |                    |
+1. 基本类型会被直接解析为值，例如字符串、数字、布尔值等。
+2. 复杂类型会被解析为代码，例如函数、非标准对象、非标准数组等。
 
-## 注册自定义属性设置器
+属性值的解析和设置流程如下图所示：
+![setter type](https://p5.music.126.net/obj/wonDlsKUwrLClGjCm8Kx/36005304616/9e1c/fb79/84e9/b2b1e5fa037d25ded366468feb762f48.png)
+
+:::tip 引擎如何区分字符串和代码片段
+为了能够正确区分普通的字符串值和代码片段，Tango 引擎在解析过程中进行了区分。代码片段始终使用 `"{{code}}"` 进行包裹，例如 `"{{() => {}}}"`。
+:::
+
+:::tip 引擎是如何解析对象的
+对于简单的对象，例如 `{ key: 'value' }`，引擎会将其解析为值。而对于复杂的对象，例如函数、带计算的对象或数组、带引用的对象或数组，都会统一将其解析为代码片段。
+:::
+
+## 内置的设置器
+
+### Value setter
+
+对于值设置器而言，直接接收和返回具体的 javascript value 即可。
+
+| 设置器名         | 接收值类型 | 说明和示例                                           |
+| ---------------- | ---------- | ---------------------------------------------------- |
+| numberSetter     | number     | 数字值设置器                                         |
+| textSetter       | string     | 文本值设置器                                         |
+| boolSetter       | boolean    | `true` 或 `false`                                    |
+| choiceSetter     | string     | 单选列表，多选一                                     |
+| selectSetter     | string     | 下拉选择器，多选一                                   |
+| actionListSetter | object[]   | `[{ key, label, ...}, ...]`                          |
+| columnSetter     | object[]   | 表格列设置器 `[{ key, dataIndex, title, ... }, ...]` |
+| dateSetter       | string     | 日期值设置器                                         |
+| dateRangeSetter  | string[]   | 日期范围设置器                                       |
+| timeSetter       | string     | 时间值设置器                                         |
+| timeRangeSetter  | string[]   | 时间范围设置器                                       |
+| enumSetter       | object     | 枚举对象 `{ key1, key2, key3 }`                      |
+| listSetter       | object[]   | 通用的对象列表设置器, `[{ key }, ...]`               |
+| optionSetter     | object[]   | 选项列表设置器, `[{ label, value }, ...]`            |
+| routerSetter     | string     | 路由设置器                                           |
+
+### Code setter
+
+对于代码设置器而言，直接接收和返回代码字符串即可。
+
+| 设置器名              | 接收值类型 | 说明和示例                               |
+| --------------------- | ---------- | ---------------------------------------- |
+| codeSetter            | code       | 通用的代码片段设置器                     |
+| eventSetter           | code       | 事件监听函数设置器, `() => {}`           |
+| jsonSetter            | code       | JSON 表达式设置器, `{ "foo": "foo" }`    |
+| jsxSetter             | code       | JSX 设置器, `<div>block</div>`           |
+| renderPropsSetter     | code       | render props 设置器, `() => <div></div>` |
+| tableCellSetter       | code       | 表格单元格设置器                         |
+| tableExpandableSetter | code       | 表格展开设置器                           |
+
+:::tip 引擎是何时对返回值进行包裹的
+代码设置器之需要直接返回代码片段即可，外层的表单状态容器会自动进行返回值的处理。例如 codeSetter 直接返回 `"{ foo: "foo" }"` 代码片段，在经过 FormModel 的处理后，会将其包裹为 `"{{{ foo: "foo" }}}`，并传递给引擎内核进行后续的处理。
+:::
+
+## 注册自定义属性设置器 {#registerSetter}
 
 ### 属性设置器的实现标准
 
-属性设置器组件是一个标准的受控型表单组件，开发者所开发的组件只需要暴露 `value` 和 `onChange(value)` 两个属性让属性面板的表单容器进行控制即可。
-
-例如，我们可以实现一个简单的字符串设置器 StringSetter，其实现如下：
+属性设置器组件是一个标准的受控型表单组件，开发者所开发的组件只需要暴露 `value` 和 `onChange(value)` 两个属性让属性面板的表单容器进行控制即可。例如，我们可以实现一个简单的字符串设置器 StringSetter，其实现如下：
 
 ```jsx
 function StringSetter({ value, onChange, ...rest }) {
@@ -76,6 +96,16 @@ registerSetter({
 });
 ```
 
+`registerSetter` 接收的配置如下：
+
+| 属性      | 说明       | 类型                | 默认值  |
+| --------- | ---------- | ------------------- | ------- |
+| name      | 设置器名称 | string              | -       |
+| alias     | 设置器别名 | string[]            | -       |
+| component | 设置器组件 | ReactComponent      | -       |
+| type      | 设置器类型 | 'value' \| 'code'   | 'value' |
+| validate  | 设置器校验 | (value) => errorMsg | -       |
+
 ### 使用自定义的属性设置器
 
 在组件的物料协议中直接声明对应的属性设置器名称即可。例如：
@@ -93,3 +123,20 @@ const prototype = {
   ],
 };
 ```
+
+## 属性设置器组件 SettingPanel {#SettingPanel}
+
+设置器组件一个属性配置表单，用于展示组件的属性配置项。
+
+| 属性             | 说明                                   | 类型                         | 默认值 |
+| ---------------- | -------------------------------------- | ---------------------------- | ------ |
+| title            | 面板标题                               | string                       | -      |
+| defaultValue     | 默认值                                 | object                       | -      |
+| groupOptions     | 分组选项                               | object                       | -      |
+| model            | 表单状态管理实例                       | FormModel                    | -      |
+| onChange         | 值变化回调                             | (name, value, field) => void | -      |
+| prototype        | 组件的可配置描述                       | ComponentPrototype           | -      |
+| renderItemExtra  | 自定义渲染表单项的额外内容（标签右侧） | (props) => ReactNode         | -      |
+| showGroups       | 是否展示分组                           | boolean                      | -      |
+| showItemSubtitle | 是否展示表单项的副标题                 | boolean                      | -      |
+| showSearch       | 是否展示搜索框                         | boolean                      | -      |
