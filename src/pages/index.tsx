@@ -4,7 +4,6 @@ import Link from '@docusaurus/Link';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
-import HomepageTimeline from '@site/src/components/Timeline';
 import { translate } from '@docusaurus/Translate';
 
 import styles from './index.module.css';
@@ -21,7 +20,10 @@ function HomepageHeader() {
           })}
         </h1>
         <p className="hero__subtitle">
-          {translate({ id: 'homepage.hero.tagline', message: siteConfig.tagline })}
+          {translate({
+            id: 'homepage.hero.tagline',
+            message: siteConfig.tagline,
+          })}
         </p>
         <div className={styles.buttons}>
           <Link className="button button--primary button--lg" to="/docs/intro">
@@ -32,9 +34,11 @@ function HomepageHeader() {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            to="https://tango-demo.musicfe.com/designer/"
-          >
-            {translate({ id: 'homepage.hero.button.playground', message: '演示应用' })}
+            to="https://tango-demo.musicfe.com/designer/">
+            {translate({
+              id: 'homepage.hero.button.playground',
+              message: '演示应用',
+            })}
           </Link>
         </div>
         <div className={styles.heroImageBox}>
@@ -52,10 +56,11 @@ function HomepageHeader() {
 export default function Home(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout title={siteConfig.title} description="Description will go into a meta tag in <head />">
+    <Layout
+      title={siteConfig.title}
+      description="Description will go into a meta tag in <head />">
       <HomepageHeader />
       <main>
-        <HomepageTimeline />
         <HomepageFeatures />
       </main>
     </Layout>
