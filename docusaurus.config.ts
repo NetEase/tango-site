@@ -4,7 +4,7 @@ import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
   title: '基于源码的低代码引擎',
-  tagline: '基于你的已有代码库实现可视化搭建操作，实时出码，无私有搭建协议',
+  tagline: '基于源码解析驱动，快速构建基于源码应用的低代码设计器，实时出码，无私有搭建协议',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
