@@ -22,6 +22,7 @@ const sidebars: SidebarsConfig = {
       label: '接入指南',
       items: [
         'designer/deploy/designer',
+        'designer/deploy/component',
         'designer/deploy/sandbox',
         'designer/deploy/server',
       ],

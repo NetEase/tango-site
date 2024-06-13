@@ -1,0 +1,144 @@
+# 组件接入
+
+Tango 引擎借助用户传入的 **组件配置** 信息识别组件，并通过组件配置信息渲染组件配置面板。在设计器接入环节中，我们介绍了可以在 `Workspace` 初始化的时候传入 `prototypes` 参数用来提供组件配置信息。组件接入，主要是指将组件的配置信息传入给引擎。
+
+`prototypes` 信息在引擎中的主要使用场景包括：
+
+- 生成代码片段：当用户通过拖拽等手段在设计器中添加组件时，引擎会根据组件配置信息生成对应的代码片段。
+- 渲染组件配置面板：当用户选中某个组件时，设计器会根据组件配置信息渲染对应的组件配置面板。
+
+```ts
+import { createEngine, Workspace } from '@music163/tango-core';
+
+const mockPrototypes = {
+  Button: {
+    /* Button Config */
+  },
+  Input: {
+    /* Input Config */
+  },
+  //...其他组件配置
+};
+
+// 工作区初始化：将项目文件传入给设计器
+const workspace = new Workspace({
+  entry: '/src/index.js',
+  files: mockFiles, // 文件参数可以参考示例应用
+  prototypes: mockPrototypes, // 组件配置信息可以参考示例应用
+});
+```
+
+组件配置信息的类型定义可以参考 [IComponentPrototype](https://netease.github.io/tango/interfaces/_music163_tango_helpers.IComponentPrototype.html)。
+
+## 组件库
+
+组件库通常包括多个子组件，每个子组件都有自己的配置信息。在设计器中，我们可以通过组件库的方式将多个子组件的配置信息传入给引擎。示例的配置代码如下：
+
+```ts
+export const Button: ComponentPrototypeType = {
+  name: 'Button',
+  title: '按钮',
+  package: '@music163/tango-mail',
+  icon: 'icon-anniu',
+  help: '按钮用于触发一个操作',
+  type: 'element',
+  props: [
+    {
+      name: 'href',
+      title: '跳转链接',
+      setter: 'textSetter',
+    },
+    {
+      name: 'children',
+      title: '文案',
+      setter: 'textSetter',
+      initValue: '按钮',
+    },
+  ],
+};
+
+export const CodeBlock: ComponentPrototypeType = {
+  name: 'CodeBlock',
+  title: '代码块',
+  package: '@music163/tango-mail',
+  icon: 'icon-code',
+  type: 'element',
+  props: [
+    {
+      name: 'code',
+      title: '代码',
+      setter: 'codeSetter',
+      initValue: "export foo = 'foo';",
+    },
+    {
+      name: 'lineNumbers',
+      title: '展示行号',
+      setter: 'boolSetter',
+      initValue: true,
+    },
+    {
+      name: 'language',
+      title: '语言',
+      setter: 'textSetter',
+      initValue: 'javascript',
+      tip: '语言列表参考 Prism.js',
+      docs: 'https://prismjs.com/#supported-languages',
+    },
+  ],
+};
+```
+
+也可以参考一个示例组件库 `@music163/tango-mail` 的配置信息：[https://github.com/NetEase/tango-components/tree/main/packages/mail/src/prototypes](https://github.com/NetEase/tango-components/tree/main/packages/mail/src/prototypes)
+
+## 业务组件
+
+对于业务组件而言，通常导出为单个组件，如果导出多个组件，可以参考组件库的方式。单个组件的配置信息示例如下：
+
+```ts
+const bizToggleButtonPrototype: ComponentPrototypeType = {
+  name: 'CtPcToggleButton',
+  exportType: 'defaultExport', // 指定了组件的导出方式为 “默认导出”
+  package: '@music163/ct-pc-toggle-button',
+  title: '示例业务组件',
+  icon: 'icon-tupian',
+  type: 'element',
+  hasChildren: false,
+  props: [
+    {
+      name: 'checked',
+      title: '是否选中',
+      setter: 'boolSetter',
+      defaultValue: false,
+    },
+    {
+      name: 'children',
+      title: '文本',
+      setter: 'textSetter',
+      initValue: '按钮',
+    },
+  ],
+};
+```
+
+与组件库相比，业务组件的配置信息中多了 `exportType` 字段，用来指定组件的导出方式，对于单个组件而言，通常为 默认导出 模式。导出方式的差异，决定了代码生成时的导入语句的不同。
+
+## 代码片段
+
+在 Tango 设计器中，还支持代码片段级别的配置信息，允许将定义好的代码片段拖拽到设计器中。代码片段的配置信息示例如下：
+
+```ts
+const Snippet2ColumnLayout: IComponentPrototype = {
+  name: 'Snippet2ColumnLayout',
+  title: '两列布局',
+  icon: 'icon-columns',
+  type: 'snippet', // 声明为代码片段类型
+  package: '@music163/antd',
+  initChildren: `
+  <Columns columns={12}>
+    <Column colSpan={6}></Column>
+    <Column colSpan={6}></Column>
+  </Columns>
+  `,
+  relatedImports: ['Columns', 'Column'],
+};
+```

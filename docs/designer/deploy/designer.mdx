@@ -5,7 +5,7 @@
 1. clone 官方示例代码，按照文档说明直接启动项目。
 2. 手工引入设计器的 npm 包，自定义配置、启动、运行。
 
-## 方法1: 通过示例代码启动设计器
+## 通过示例代码启动设计器
 
 你可以使用 Tango 代码仓库内的 `/apps/playground` 复制出来，作为基础应用并改造。你需要移除 `.umirc.ts` 中与 `resolvePackageIndex()` 方法相关的配置，具体可直接参考我们的示例应用的 [`.umirc.ts`](https://github.com/NetEase/tango-playground/blob/master/.umirc.ts) 文件，修改后再手动安装 `@music163/tango-designer` 即可启动项目。
 
@@ -23,7 +23,7 @@
     nvm use 16
     ```
 
-2. 克隆项目仓库：
+2.  克隆项目仓库：
 
     ```sh
     git clone https://github.com/NetEase/tango-playground.git --depth 1
@@ -31,7 +31,7 @@
 
     也可以直接下载 [最新代码的压缩包](https://github.com/NetEase/tango-playground/archive/refs/heads/master.zip) 并解压。
 
-3. 安装项目依赖：
+3.  安装项目依赖：
 
     ```sh
     cd tango-playground
@@ -45,24 +45,24 @@
     127.0.0.1 local.example.com
     ```
 
-5. 修改 `/src/pages/index.tsx`，将 `<Sandbox>` 的 `bundlerURL` 替换为已部署的沙箱的地址。
+5.  修改 `/src/pages/index.tsx`，将 `<Sandbox>` 的 `bundlerURL` 替换为已部署的沙箱的地址。
 
     ```jsx
     <Sandbox
-        bundlerURL="https://sandbox.example.com"
-        onMessage={(e) => {
-            // ...
-        }}
+      bundlerURL="https://sandbox.example.com"
+      onMessage={(e) => {
+        // ...
+      }}
     />
     ```
 
-6. 修改 `/package.json`，修改 `dev` 脚本的 `HOST` 环境变量，将其改为上述配置在 hosts 文件时定义的开发域名。
+6.  修改 `/package.json`，修改 `dev` 脚本的 `HOST` 环境变量，将其改为上述配置在 hosts 文件时定义的开发域名。
 
     ```
     "dev": "HOST=local.example.com PORT=8001 umi dev",
     ```
 
-7. 使用脚手架的指令启动项目开始开发，启动后需要通过之前 hosts 配置的域名打开本地项目，并信任自签发的证书。
+7.  使用脚手架的指令启动项目开始开发，启动后需要通过之前 hosts 配置的域名打开本地项目，并信任自签发的证书。
 
     ```sh
     # 经过上述修改启动后，可通过 https://local.example.com:8001 访问项目
@@ -73,12 +73,115 @@
 
     ![](https://p6.music.126.net/obj/wo3DlcOGw6DClTvDisK1/33392683897/c72b/f6f2/2944/a481233c752a9e74213fa15aa516b6f0.png)
 
-
-## 方法2: 手工引入设计器的 npm 包
-
-WIP
-
-
 ## 配置低代码设计器
 
-请参考 [设计器自定义](../customize/panels) 部分。
+Tango 设计器是一个独立的基于 React 实现的 npm 包，你可以通过 npm 或 yarn 来安装 `@music163/tango-designer` 使用。
+
+### 引擎初始化
+
+Tango 引擎遵循最小内核的原则，其实现非常的精简，提供了引擎实现的基本规范，和默认的基于源码解析操纵的引擎实现。意味着，你可以快速的初始化一个基于源码解析操纵的设计器引擎。当然，也可以根据自己的需要，按照引擎的规范实现自定义的实现。
+
+```js
+import { createEngine, Workspace } from '@music163/tango-core';
+// 工作区初始化：将项目文件传入给设计器
+const workspace = new Workspace({
+  entry: '/src/index.js',
+  files: mockFiles, // 文件参数可以参考示例应用
+  prototypes: mockPrototypes, // 组件配置信息可以参考示例应用
+});
+
+// 引擎初始化：将工作区传入给设计器引擎，完成设计器的初始化
+const engine = createEngine({
+  workspace,
+});
+```
+
+关于组件配置信息可以参考 [组件接入](./component) 部分。
+
+### 设计器初始化和布局
+
+Tango 提供了基于 React 实现的开箱即用的设计器组件，你可以借助这些组件快速的组装一个基本的低代码设计器。也可以根据实际需要，开发自定义的设计器组件。
+
+关于设计器组件的介绍和使用可以参考 [设计器自定义](../customize/panels) 部分。
+
+```jsx
+import {
+  Designer,
+  DesignerPanel,
+  SettingPanel,
+  Sidebar,
+  Toolbar,
+  WorkspacePanel,
+  WorkspaceView,
+  CodeEditor,
+  Sandbox,
+} from '@music163/tango-designer';
+
+export default function App() {
+  return (
+    <Designer engine={engine}>
+      <DesignerPanel
+        logo="Your Logo"
+        actions={
+          <Box px="l">
+            <Toolbar>
+              <Toolbar.Item key="history" placement="left" />
+              <Toolbar.Item key="preview" placement="left" />
+              <Toolbar.Item key="modeSwitch" placement="right" />
+              <Toolbar.Item key="togglePanel" placement="right" />
+            </Toolbar>
+          </Box>
+        }>
+        <Sidebar>
+          <Sidebar.Item
+            key="components"
+            label="组件"
+            icon={<AppstoreAddOutlined />}
+            widgetProps={{
+              menuData, // 配置设计器的组件列表
+            }}
+          />
+          <Sidebar.Item key="outline" label="结构" icon={<BuildOutlined />} />
+          <Sidebar.Item
+            key="dependency"
+            label="依赖"
+            icon={<ClusterOutlined />}
+            isFloat
+            width={800}
+          />
+        </Sidebar>
+        <WorkspacePanel>
+          <WorkspaceView mode="design">
+            <Sandbox />
+          </WorkspaceView>
+          <WorkspaceView mode="code">
+            <CodeEditor />
+          </WorkspaceView>
+        </WorkspacePanel>
+        <SettingPanel />
+      </DesignerPanel>
+    </Designer>
+  );
+}
+```
+
+### 配置设计器的组件列表
+
+设计器的组件列表供用户快速的了解到当前应用支持的组件，可以通过 menuData 配置项传入给侧边栏的组件面板。定义格式如下：
+
+```js
+const menuData = {
+  common: [
+    {
+      title: '常用',
+      items: ['Button', 'Section', 'Columns', 'Column', 'Box', 'Text'],
+    },
+    {
+      title: '输入',
+      items: ['Input', 'InputNumber', 'Select'],
+    },
+  ],
+};
+```
+
+值得注意的是，menuData 定义的组件名，需要在引擎的 prototypes 参数中提前定义好，以便引擎能够正确的解析和渲染组件的配置参数。

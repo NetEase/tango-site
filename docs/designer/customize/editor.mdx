@@ -1,5 +1,10 @@
 # 编辑器自定义
 
-:::tip
-正在编写中，敬请期待。
-:::
+Tango 设计器提供了默认基于 monaco-editor 的代码编辑器实现，你可以根据自己的需求，自定义代码编辑器的实现。用户需要将代码文件的变化同步给引擎，具体包括：
+
+- 添加文件: `workspace.addFile`
+- 删除文件：`workspace.removeFile`
+- 重命名文件：`workspace.renameFile`
+- 代码变更：`workspace.updateFile`
+
+具体可以参考引擎的实现：https://github.com/NetEase/tango/blob/main/packages/designer/src/editor.tsx
