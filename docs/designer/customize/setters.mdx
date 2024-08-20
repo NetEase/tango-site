@@ -82,6 +82,24 @@ function StringSetter({ value, onChange, ...rest }) {
 }
 ```
 
+### 属性的清空
+
+如果需要清空一个属性（在设计器中会移除掉该属性），只需要在 setter 的 onChange 中返回 `undefined` 即可。例如，在下面的例子中，我们在 StringSetter 中添加了一个清空按钮，点击该按钮会清空当前的属性值。
+
+```jsx
+function StringSetter({ value, onChange, ...rest }) {
+  const handleChange = (e) => {
+    onChange(e.target.value);
+  };
+  return (
+    <div>
+      <input value={value} onChange={handleChange} />
+      <button onClick={() => onChange(undefined)}>X</button>
+    </div>
+  );
+}
+```
+
 ### 注册属性设置器
 
 注册属性设置器非常简单，只需要借助设置器暴露出来的 `registerSetter` 即可。
