@@ -1,0 +1,26 @@
+{
+  "logo.alt": {
+    "message": "Tango Logo",
+    "description": "The alt text of navbar logo"
+  },
+  "item.label.Demo": {
+    "message": "Demo",
+    "description": "Navbar item with label Demo"
+  },
+  "item.label.D2C": {
+    "message": "D2C",
+    "description": "Navbar item with label D2C"
+  },
+  "item.label.Document": {
+    "message": "文档",
+    "description": "Navbar item with label Document"
+  },
+  "item.label.Blog": {
+    "message": "博客",
+    "description": "Navbar item with label Blog"
+  },
+  "item.label.API": {
+    "message": "API",
+    "description": "Navbar item with label API"
+  }
+}

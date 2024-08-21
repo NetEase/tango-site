@@ -1,0 +1,42 @@
+{
+  "version.label": {
+    "message": "Next",
+    "description": "The label for version current"
+  },
+  "sidebar.tutorialSidebar.category.boot": {
+    "message": "boot",
+    "description": "The label for category boot in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.designer": {
+    "message": "designer",
+    "description": "The label for category designer in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.customize": {
+    "message": "customize",
+    "description": "The label for category customize in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.deploy": {
+    "message": "deploy",
+    "description": "The label for category deploy in sidebar tutorialSidebar"
+  },
+  "sidebar.tutorialSidebar.category.design": {
+    "message": "design",
+    "description": "The label for category design in sidebar tutorialSidebar"
+  },
+  "sidebar.designer.category.接入指南": {
+    "message": "接入指南",
+    "description": "The label for category 接入指南 in sidebar designer"
+  },
+  "sidebar.designer.category.设计器自定义": {
+    "message": "设计器自定义",
+    "description": "The label for category 设计器自定义 in sidebar designer"
+  },
+  "sidebar.designer.category.设计原理": {
+    "message": "设计原理",
+    "description": "The label for category 设计原理 in sidebar designer"
+  },
+  "sidebar.designer.category.应用框架": {
+    "message": "应用框架",
+    "description": "The label for category 应用框架 in sidebar designer"
+  }
+}

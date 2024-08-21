@@ -4,73 +4,73 @@ authors: [wwsun]
 tags: [netease, tango, open-source]
 ---
 
-## 📝 Tango 简介
+## 📝 Introduction to Tango
 
-Tango 是一个用于快速构建低代码平台的低代码设计器框架，借助 Tango 只需要数行代码就可以完成一个基本的低代码平台前端系统的搭建。Tango 低代码设计器直接读取前端项目的源代码，并以源代码为中心，执行和渲染前端视图，并为用户提供低代码可视化搭建能力，用户的搭建操作会转为对源代码的修改。借助于 Tango 构建的低代码工具或平台，可以实现 源码进，源码出的效果，无缝与企业内部现有的研发体系进行集成。
+Tango is a low-code designer framework used for rapidly building low-code platforms. With Tango, you can set up a basic front-end system for a low-code platform with just a few lines of code. The Tango low-code designer directly reads the source code of the front-end project, executes and renders the front-end view centered around the source code, and provides users with low-code visual building capabilities. User operations during the build process translate into modifications of the source code. Tools or platforms built using Tango can achieve seamless integration with an enterprise's existing development system, ensuring a smooth "source code in, source code out" experience.
 
-### ✨ 核心特性
+### ✨ Features
 
-- 经历网易云音乐内网生产环境的实际检验，可灵活集成应用于低代码平台，本地开发工具等
-- 基于源码 AST 驱动，无私有 DSL 和协议
-- 提供实时出码能力，支持源码进，源码出
-- 开箱即用的前端低代码设计器，提供灵活易用的设计器 React 组件
-- 使用 TypeScript 开发，提供完整的类型定义文件
+- Proven in the production environment of NetEase Cloud Music's internal network, it can be flexibly integrated into low-code platforms, local development tools, and more.
+- Driven by source code AST, with no proprietary DSL or protocols.
+- Provides real-time code generation capabilities, supporting "source code in, source code out."
+- Out-of-the-box front-end low-code designer with flexible and easy-to-use designer React components.
+- Developed with TypeScript, providing comprehensive type definition files.
 
-### 🏗️ 基于源码的低代码搭建方案
+### 🏗️ Source Code-Based Low-Code Building Solution
 
-Tango 低代码引擎不依赖私有搭建协议和 DSL，而是直接使用源代码驱动，引擎内部将源码转为 AST，用户的所有的搭建操作转为对 AST 的遍历和修改，进而将 AST 重新生成为代码，将代码同步给在线沙箱执行。与传统的 [基于 Schema 驱动的低代码方案](https://mp.weixin.qq.com/s/yqYey76qLGYPfDtpGkVFfA) 相比，不受私有 DSL 和协议的限制，能够完美的实现低代码搭建与源码开发的无缝集成。
+The Tango low-code engine does not rely on proprietary building protocols and DSLs but directly uses source code as the driver. Internally, the engine converts the source code into AST. All user building operations translate into AST traversal and modifications, which then regenerate the code and synchronize it with an online sandbox for execution. Compared to traditional [schema-driven low-code solutions](https://mp.weixin.qq.com/s/yqYey76qLGYPfDtpGkVFfA), it is free from the constraints of proprietary DSLs and protocols, ensuring seamless integration between low-code building and source code development.
 
 <img src="https://p5.music.126.net/obj/wonDlsKUwrLClGjCm8Kx/13140534982/ee2e/f42c/cc9a/184e2918a011b57d46e6c64a2722fa44.png" />
 
-### 📄 源码进，源码出
+### 📄 Source Code In, Source Code Out
 
-由于引擎内核完全基于源代码驱动实现，Tango 低代码引擎能够实现源代码进，源代码出的可视化搭建能力，不提供任何私有的中间产物。如果公司内部已经有了一套完善的研发体系（代码托管、构建、部署、CDN），那么可以直接使用 Tango 低代码引擎与现有的服务集成构建低代码开发平台。
+As the engine core is entirely source code-driven, the Tango low-code engine can achieve a "source code in, source code out" visual building capability without offering any proprietary intermediate artifacts. If your company already has a comprehensive development system (code hosting, building, deployment, CDN), you can directly use the Tango low-code engine to integrate with existing services and build a low-code development platform.
 
-![code in, code out](./codein-codeout.png)
+![code in, code out](/img/blog/230830/codein-codeout.png)
 
-### 🏆 产品优势
+### 🏆 Advantages
 
-与基于私有 Schema 的低代码搭建方案相比，Tango 低代码引擎具有如下优势：
+Compared to schema-based low-code building solutions, the Tango low-code engine has the following advantages:
 
-| 对比项       | 基于 Schema 的低代码搭建方案                       | Tango（基于源码 AST 转换）                                            |
-| ------------ | -------------------------------------------------- | --------------------------------------------------------------------- |
-| 适用场景     | 面向特定的垂直搭建场景，例如表单，营销页面等       | 🔥 面面向以源码为中心的应用搭建场景                                   |
-| 语言能力     | 依赖私有协议扩展，不灵活，且难以与编程语言能力对齐 | 🔥 直接基于 JavaScript 语言，可以使用所有的语言特性，不存在扩展性问题 |
-| 开发能力     | LowCode                                            | 🔥 LowCode + ProCode                                                  |
-| 源码导出     | 以 Schema 为中心，单向出码，不可逆                                   | 🔥 以源码为中心，双向转码                                             |
-| 自定义依赖   | 需要根据私有协议扩展封装，定制成本高               | 🔥 原有组件可以无缝低成本接入                                         |
-| 集成研发设施 | 定制成本高，需要额外定制                           | 🔥 低成本接入，可以直接复用原有的部署发布能力                         |
+| Comparison Item                         | Schema-Based Low-Code Building Solutions                                                                           | Tango (Source Code AST Transformation)                                                   |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| Applicable Scenarios                    | Specific vertical building scenarios, such as forms, marketing pages, etc.                                         | 🔥 Source code-centric application building scenarios                                    |
+| Language Capabilities                   | Dependent on proprietary protocol extensions, inflexible, and hard to align with programming language capabilities | 🔥 Directly based on JavaScript, can use all language features, no extensibility issues  |
+| Development Capability                  | LowCode                                                                                                            | 🔥 LowCode + ProCode                                                                     |
+| Source Code Export                      | Schema-centric, one-way code generation, irreversible                                                              | 🔥 Source code-centric, bidirectional code transformation                                |
+| Custom Dependencies                     | Requires extension and encapsulation based on proprietary protocols, high customization cost                       | 🔥 Existing components can be seamlessly integrated at low cost                          |
+| Integration with Development Facilities | High customization cost, requires additional customization                                                         | 🔥 Low-cost integration, can directly reuse existing deployment and release capabilities |
 
-## 📐 技术架构
+## 📐 Architecture
 
-Tango 低代码引擎在实现上进行了分层解藕，使得上层的低代码平台与底层的低代码引擎可以独立开发和维护，快速集成部署。此外，Tango 低代码引擎定义了一套开放的物料生态体系，开发者可以自由的贡献扩展组件配置能力的属性设置器，以及扩展低代码物料的二方三方业务组件。
+The Tango low-code engine is implemented with layered decoupling, allowing the upper-level low-code platform and the underlying low-code engine to be developed and maintained independently, facilitating rapid integration and deployment. Additionally, the Tango low-code engine defines an open material ecosystem, enabling developers to freely contribute attribute setters that extend component configuration capabilities and expand low-code materials with secondary and tertiary business components.
 
-具体的技术架构如下图所示：
+The specific technical architecture is as follows:
 
-![low-code engine](./lowocode-engine.png)
+![low-code engine](/img/blog/230830/lowocode-engine.png)
 
-## ⏰ 开源里程碑
+## ⏰ Milestones
 
-Tango 低代码引擎是网易云音乐内部低代码平台的核心构件，开源涉及到大量的核心逻辑解藕的工作，这将给我们正常的工作带来大量的额外工作，因此我们计划分阶段推进 Tango 低代码引擎的开源事项。
+The Tango low-code engine is the core component of NetEase Cloud Music's internal low-code platform. Open-sourcing involves decoupling a significant amount of core logic, which adds considerable extra work to our regular tasks. Therefore, we plan to advance the open-source process for the Tango low-code engine in stages.
 
-1. 今天我们正式发布 Tango 低代码引擎的第一个社区版本，该版本将会包括 Tango 低代码引擎的核心代码库，TangoBoot 应用框架，以及基于 antd v4 适配的低代码组件库。
-2. 我们计划在今年的 **9 月 30 日** 发布低代码引擎的 **1.0 Beta** 版本，该版本将会对核心的实现面向社区场景重构，移除掉我们在云音乐内部的一些兼容代码，并将核心的实现进行重构和优化。
-3. 我们计划在今年的 **10 月 30 日** 发布低代码引擎的 **1.0 RC** 版本，该版本将会保证核心 API 基本稳定，不再发生 BREAKING CHANGE，同时我们将会提供完善翔实的开发指南、部署文档、和演示应用。
-4. **正式版**本我们将在 **2023 年 Q4 结束前** 发布，届时我们会进一步完善我们的开源社区运营机制。
+1. Today, we officially release the first community version of the Tango low-code engine, which will include the core codebase of the Tango low-code engine, the TangoBoot application framework, and a low-code component library adapted to antd v4.
+2. We plan to release the 1.0 Beta version of the low-code engine on September 30th this year. This version will refactor the core implementation for community scenarios, remove some compatibility code from our internal use in Cloud Music, and optimize the core implementation.
+3. We plan to release the 1.0 RC version of the low-code engine on October 30th this year. This version will ensure that the core API is basically stable, with no more BREAKING CHANGES. Additionally, we will provide comprehensive development guides, deployment documentation, and demo applications.
+4. We aim to release the official version by the end of Q4 2023. By then, we will further improve our open-source community operation mechanism.
 
-![milestones](./tango-milestones.png)
+![milestones](/img/blog/230830/tango-milestones.png)
 
-## 🤝 社区建设
+## 🤝 Community Building
 
-我们的开源工作正在积极推进中，可以通过如下的信息了解到我们的最新进展：
+Our open-source work is actively progressing. You can learn about our latest developments through the following information:
 
-- Github 仓库：https://github.com/NetEase/tango
-- 文档站点：https://netease.github.io/tango/
+- GitHub Repository: https://github.com/NetEase/tango
+- Documentation Site: https://netease.github.io/tango/
 
-欢迎大家加入到我们的社区中来，一起参与到 Tango 低代码引擎的开源建设中来。有任何问题都可以通过 [Github Issues](https://github.com/NetEase/tango/issues) 反馈给我们，我们会及时跟进处理。
+We welcome everyone to join our community and participate in the open-source construction of the Tango low-code engine. If you have any questions, you can provide feedback through [GitHub Issues](https://github.com/NetEase/tango/issues), and we will follow up promptly.
 
-## 💗 致谢
+## 💗 Acknowledgments
 
-感谢网易云音乐公共技术团队，大前端团队，直播技术团队，以及所有参与过 Tango 项目的同学们。
+Special thanks to the NetEase Cloud Music Public Technology Team, Frontend Team, Live Streaming Technology Team, and everyone who has participated in the Tango project.
 
-感谢 CodeSandbox 提供的 [Sandpack](https://sandpack.codesandbox.io/) 项目，为 Tango 提供了强大的基于浏览器的代码构建与执行能力。
+Thanks to CodeSandbox for providing the [Sandpack](https://sandpack.codesandbox.io/) project, which offers powerful browser-based code building and execution capabilities for Tango.

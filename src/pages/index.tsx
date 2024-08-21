@@ -1,7 +1,6 @@
 import React from 'react';
 import clsx from 'clsx';
 import Link from '@docusaurus/Link';
-import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import Layout from '@theme/Layout';
 import HomepageFeatures from '@site/src/components/HomepageFeatures';
 import { translate } from '@docusaurus/Translate';
@@ -9,27 +8,26 @@ import { translate } from '@docusaurus/Translate';
 import styles from './index.module.css';
 
 function HomepageHeader() {
-  const { siteConfig } = useDocusaurusContext();
   return (
     <header className={clsx('hero', styles.heroBanner)}>
       <div className="container">
         <h1 className="hero__title">
           {translate({
             id: 'homepage.hero.title',
-            message: siteConfig.title,
+            message: 'Code Driven LowCode Builder',
           })}
         </h1>
         <p className="hero__subtitle">
           {translate({
-            id: 'homepage.hero.tagline',
-            message: siteConfig.tagline,
+            id: 'homepage.hero.subtitle',
+            message: 'Develop low-code app on your codebase.',
           })}
         </p>
         <div className={styles.buttons}>
           <Link className="button button--primary button--lg" to="/docs/intro">
             {translate({
               id: 'homepage.hero.button.document',
-              message: '快速开始',
+              message: 'Getting Started',
             })}
           </Link>
           <Link
@@ -37,7 +35,7 @@ function HomepageHeader() {
             to="https://tango-demo.musicfe.com/designer/">
             {translate({
               id: 'homepage.hero.button.playground',
-              message: '演示应用',
+              message: 'Try a Demo',
             })}
           </Link>
         </div>
@@ -54,11 +52,16 @@ function HomepageHeader() {
 }
 
 export default function Home(): JSX.Element {
-  const { siteConfig } = useDocusaurusContext();
   return (
     <Layout
-      title={siteConfig.title}
-      description="Description will go into a meta tag in <head />">
+      title={translate({
+        id: 'homepage.layout.title',
+        message: 'Code Driven LowCode Builder',
+      })}
+      description={translate({
+        id: 'homepage.layout.subtitle',
+        message: 'Description will go into a meta tag in <head /> ',
+      })}>
       <HomepageHeader />
       <main>
         <HomepageFeatures />

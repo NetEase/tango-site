@@ -1,0 +1,50 @@
+{
+  "copyright": {
+    "message": "Copyright © 2024 NetEase Cloud Music, Inc.",
+    "description": "The footer copyright"
+  },
+  "logo.alt": {
+    "message": "网易云音乐",
+    "description": "The alt text of footer logo"
+  },
+  "link.title.Document": {
+    "message": "文档",
+    "description": "The title of the footer links column with title=Document in the footer"
+  },
+  "link.title.Community": {
+    "message": "社区",
+    "description": "The title of the footer links column with title=Community in the footer"
+  },
+  "link.title.Resources": {
+    "message": "资源",
+    "description": "The title of the footer links column with title=Resources in the footer"
+  },
+  "link.title.More": {
+    "message": "更多",
+    "description": "The title of the footer links column with title=More in the footer"
+  },
+  "link.item.label.Getting start": {
+    "message": "快速开始",
+    "description": "The label of footer link with label=Getting start linking to /docs/designer/quick-start"
+  },
+  "link.item.label.Blog": {
+    "message": "博客",
+    "description": "The label of footer link with label=Blog linking to /blog"
+  },
+  "link.item.label.Seal D2C - Figma Plugin": {
+    "message": "Seal D2C - Figma 插件",
+    "description": "The label of footer link with label=Seal D2C - Figma Plugin linking to https://www.figma.com/community/plugin/1174548852019950797/seal-figma-to-code-d2c"
+  },
+  "link.item.label.Seal D2C - MasterGo Plugin": {
+    "message": "Seal D2C - MasterGo 插件",
+    "description": "The label of footer link with label=Seal D2C - MasterGo Plugin linking to https://mastergo.com/community/plugin/98956774428196/"
+  },
+  "link.item.label.Discussions": {
+    "message": "Discussions",
+    "description": "The label of footer link with label=Discussions linking to https://github.com/NetEase/tango/discussions"
+  },
+  "link.item.label.GitHub": {
+    "message": "GitHub",
+    "description": "The label of footer link with label=GitHub linking to https://github.com/netease/tango"
+  }
+}

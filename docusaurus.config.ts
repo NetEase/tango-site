@@ -3,8 +3,8 @@ import type { Config } from '@docusaurus/types';
 import type * as Preset from '@docusaurus/preset-classic';
 
 const config: Config = {
-  title: '基于源码的低代码引擎',
-  tagline: '基于源码解析驱动，快速构建基于源码应用的低代码设计器，实时出码，无私有搭建协议',
+  title: 'OpenTango',
+  tagline: 'A code driven lowCode builder',
   favicon: 'img/favicon.ico',
 
   // Set the production url of your site here
@@ -25,8 +25,8 @@ const config: Config = {
   // useful metadata like html lang. For example, if your site is Chinese, you
   // may want to replace "en" with "zh-Hans".
   i18n: {
-    defaultLocale: 'zh-Hans',
-    locales: ['zh-Hans'],
+    defaultLocale: 'en',
+    locales: ['en', 'zh-Hans'],
   },
 
   presets: [
@@ -77,14 +77,14 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'designer',
           position: 'left',
-          label: '文档',
+          label: 'Document',
         },
         {
           href: 'https://netease.github.io/tango/index.html',
           label: 'API',
           position: 'left',
         },
-        { to: '/blog', label: '博客', position: 'left' },
+        { to: '/blog', label: 'Blog', position: 'left' },
         {
           type: 'html',
           position: 'right',
@@ -101,28 +101,27 @@ const config: Config = {
           target: '_blank',
           label: 'D2C',
           position: 'right',
-
         },
-        // {
-        //   type: 'localeDropdown',
-        //   position: 'right',
-        // },
+        {
+          type: 'localeDropdown',
+          position: 'right',
+        },
       ],
     },
     footer: {
       style: 'dark',
       links: [
         {
-          title: '文档',
+          title: 'Document',
           items: [
             {
-              label: '快速开始',
+              label: 'Getting start',
               to: '/docs/designer/quick-start',
             },
           ],
         },
         {
-          title: '社区',
+          title: 'Community',
           items: [
             {
               label: 'Discussions',
@@ -131,10 +130,10 @@ const config: Config = {
           ],
         },
         {
-          title: '相关资源',
+          title: 'Resources',
           items: [
             {
-              label: '博客',
+              label: 'Blog',
               to: '/blog',
             },
             {
@@ -144,14 +143,14 @@ const config: Config = {
           ],
         },
         {
-          title: '更多产品',
+          title: 'More',
           items: [
             {
-              label: '海豹 D2C - Figma 插件',
+              label: 'Seal D2C - Figma Plugin',
               to: 'https://www.figma.com/community/plugin/1174548852019950797/seal-figma-to-code-d2c',
             },
             {
-              label: '海豹 D2C - MasterGo 插件',
+              label: 'Seal D2C - MasterGo Plugin',
               to: 'https://mastergo.com/community/plugin/98956774428196/',
             },
           ],
