@@ -1,8 +1,8 @@
 {
-  "homepage.layout.title": {
-    "message": "源码驱动的低代码引擎"
+  "homepage.hero.title": {
+    "message": "一个源码驱动的低代码引擎"
   },
-  "homepage.layout.subtitle": {
+  "homepage.hero.subtitle": {
     "message": "基于代码库开发低代码应用"
   },
   "homepage.hero.button.document": {

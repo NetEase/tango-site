@@ -14,7 +14,7 @@ function HomepageHeader() {
         <h1 className="hero__title">
           {translate({
             id: 'homepage.hero.title',
-            message: 'Code Driven LowCode Builder',
+            message: 'A Code Driven LowCode Builder Framework',
           })}
         </h1>
         <p className="hero__subtitle">
@@ -55,11 +55,11 @@ export default function Home(): JSX.Element {
   return (
     <Layout
       title={translate({
-        id: 'homepage.layout.title',
+        id: 'homepage.hero.title',
         message: 'Code Driven LowCode Builder',
       })}
       description={translate({
-        id: 'homepage.layout.subtitle',
+        id: 'homepage.hero.subtitle',
         message: 'Description will go into a meta tag in <head /> ',
       })}>
       <HomepageHeader />
