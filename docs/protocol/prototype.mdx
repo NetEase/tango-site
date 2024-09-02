@@ -1,0 +1,198 @@
+# 组件配置协议
+
+组件配置协议是附加在组件包上的一层额外描述文件，Tango 设计器将会借助这个配置文件为选中的组件渲染配置面板。
+
+## 组件描述
+
+请参考 [IComponentPrototype](https://netease.github.io/tango/interfaces/_music163_tango_helpers.IComponentPrototype.html)
+
+## 组件属性描述
+
+请参考 [IComponentProps](https://netease.github.io/tango/interfaces/_music163_tango_helpers.IComponentProp.html)
+
+### 嵌套属性
+
+当某个组件属性为嵌套属性时，例如 `<Table scroll={{ x: 800, y: 400 }} />`，此时可以描述如下：
+
+```js
+{
+  name: 'Table',
+  props: [
+    {
+      name: 'scroll',
+      props: [
+        {
+          name: 'x',
+          setter: 'numberSetter',
+        },
+        {
+          name: 'y',
+          setter: 'numberSetter',
+        }
+      ],
+    }
+  ],
+}
+```
+
+### 属性的按需展示
+
+当某个属性依赖某个特定的其他属性值时，可以借助 `getVisible` 实现关联展示控制：
+
+```js
+{
+  name: 'Button',
+  props: [
+    {
+      name: 'shape',
+    },
+    {
+      name: 'buttonType',
+      getVisible: (form) => {
+        // 配置项 buttonType 仅在配置项 shape 的值为 button 时才展示
+        return form.getValue('shape') === 'button';
+      },
+    },
+  ];
+}
+```
+
+### 函数模板
+
+当某个属性为函数类型时，且希望在 eventSetter 中快捷生成函数的模板代码时，可以使用 `template` 属性指定
+
+```js
+{
+  name: 'Button',
+  props: [
+    {
+      name: 'shape',
+    },
+    {
+      name: 'onClick',
+      setter: 'eventSetter',
+      // {{content}} 为插值变量，会被替换为用户输入的内容，或选定的变量
+      template: '(e) => {\n  {{content}}\n}',
+    },
+  ];
+}
+```
+
+### 自定义渲染列表
+
+或某个属性为 renderProps 类型时，可以借助 `options` 属性配置 renderProps 的渲染函数模板
+
+```js
+{
+  name: 'CustomCard',
+  props: [
+    {
+        name: 'renderExtra',
+        title: 'extra自定义渲染',
+        setter: 'renderSetter',
+        options: [
+          {
+            label: '占位空间',
+            value: 'Box',
+            // 自定义渲染代码
+            render: '() => <Box>test</Box>',
+            // 自定义渲染代码需要额外引入的组件
+            relatedImports: ['Box'],
+          },
+          {
+            label: '占位文本',
+            value: 'Text',
+            render: '() => <Text>text</Text>',
+            relatedImports: ['Text'],
+          },
+        ],
+      },
+  ];
+}
+```
+
+### 动态属性的展示
+
+当组件需要依据某个属性值进行动态设置其他属性时，可以借助 `getProp` 实现控制：
+
+```js
+{
+  name: 'FormItem',
+  props: [
+    {
+      name: 'component',
+      title: '控件类型',
+    },
+    {
+      name: 'componentProps',
+      title: '子组件属性',
+      getProp(form) {
+        const type = form.getValue('component');
+        const proto = { ...componentMap[type] };
+        const props = omitProps(proto.props, [
+          'placeholder',
+          'options',
+          'onChange',
+          'defaultValue',
+          'value',
+        ]);
+        return {
+          title: proto.title + '属性',
+          props,
+        };
+      },
+    }
+  ],
+}
+```
+
+### 属性的补全提示
+
+当某个属性在输入时需要进行输入提示时，例如某个函数属性需要提示其签名的模版，则可以借助属性输入提示实现:
+
+```js
+{
+  name: 'TableColumn',
+  props: [
+    {
+      name: 'render',
+      setter: 'expressionSetter',
+      autoCompleteOptions: ['(value, record, index) => { return null; }'],
+    }
+  ],
+}
+```
+
+## 组件拖拽规则描述
+
+请参考 [IComponentDnDRules](https://netease.github.io/tango/interfaces/_music163_tango_helpers.IComponentDndRules.html)
+
+### canDrag/canDrop
+
+在 onDragStart 的时候执行。
+
+```js
+export const Page = {
+  name: 'Page',
+  rules: {
+    canDrag() {
+      return false;
+    },
+  },
+};
+```
+
+### canMoveIn/canMoveOut
+
+在 onDragEnter 的时候执行。
+
+```js
+export const Modal = {
+  name: 'Modal',
+  rules: {
+    canMoveIn(incomingName) {
+      return !(incomingName === Modal.name);
+    },
+  },
+};
+```
