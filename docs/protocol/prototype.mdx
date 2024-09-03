@@ -57,27 +57,6 @@
 }
 ```
 
-### 函数模板
-
-当某个属性为函数类型时，且希望在 eventSetter 中快捷生成函数的模板代码时，可以使用 `template` 属性指定
-
-```js
-{
-  name: 'Button',
-  props: [
-    {
-      name: 'shape',
-    },
-    {
-      name: 'onClick',
-      setter: 'eventSetter',
-      // {{content}} 为插值变量，会被替换为用户输入的内容，或选定的变量
-      template: '(e) => {\n  {{content}}\n}',
-    },
-  ];
-}
-```
-
 ### 自定义渲染列表
 
 或某个属性为 renderProps 类型时，可以借助 `options` 属性配置 renderProps 的渲染函数模板
@@ -107,6 +86,54 @@
           },
         ],
       },
+  ];
+}
+```
+
+### `renderSetter` 函数模板
+
+当某个属性为 render props 类型时，且希望在 renderSetter 中快捷生成函数的模板代码时，可以使用 `template` 属性指定
+
+```js
+{
+  name: 'TableColumn',
+  props: [
+    {
+      name: 'render',
+      setter: 'renderSetter',
+      options: [
+        {
+            label: '按钮组',
+            value: 'ButtonGroup',
+            renderBody:
+              '<ButtonGroup><Button>button1</Button><Button>button2</Button></ButtonGroup>',
+            relatedImports: ['ButtonGroup', 'Button'],
+          },
+      ]
+      // {{content}} 为插值变量，会被替换为 options 列表项中的 renderBody 内容
+      template: '(value, record, index) => {\n  {{content}}\n}',
+    },
+  ];
+}
+```
+
+### `eventSetter/codeSetter` 函数模板
+
+当某个属性为函数类型时，且希望在 eventSetter 中快捷生成函数的模板代码时，可以使用 `template` 属性指定
+
+```js
+{
+  name: 'Button',
+  props: [
+    {
+      name: 'shape',
+    },
+    {
+      name: 'onClick',
+      setter: 'eventSetter',
+      // {{content}} 为插值变量，会被替换为用户输入的内容，或选定的变量
+      template: '(e) => {\n  {{content}}\n}',
+    },
   ];
 }
 ```
